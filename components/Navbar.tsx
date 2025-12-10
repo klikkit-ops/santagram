@@ -20,7 +20,7 @@ export default function Navbar() {
                             height={50}
                             className="rounded-full"
                         />
-                        <span className="heading-display text-xl sm:text-2xl hidden sm:block">
+                        <span className="heading-display text-xl sm:text-2xl">
                             SantaGram
                         </span>
                     </Link>

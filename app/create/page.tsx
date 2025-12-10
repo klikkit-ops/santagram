@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useCurrency } from '@/components/CurrencyProvider';
 
 interface FormData {
     childName: string;
@@ -23,6 +24,7 @@ const messageTypes = [
 
 export default function CreatePage() {
     const router = useRouter();
+    const { currency, isLoading: currencyLoading } = useCurrency();
     const [step, setStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [formData, setFormData] = useState<FormData>({
@@ -46,7 +48,10 @@ export default function CreatePage() {
             const response = await fetch('/api/create-checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
+                body: JSON.stringify({
+                    ...formData,
+                    currency: currency.code,
+                }),
             });
 
             const data = await response.json();
@@ -318,7 +323,9 @@ export default function CreatePage() {
                                     <div className="text-white font-semibold">Personalized Santa Video</div>
                                     <div className="text-white/60 text-sm">HD quality, ready in minutes</div>
                                 </div>
-                                <div className="text-3xl font-bold text-[var(--gold)]">$2.99</div>
+                                <div className="text-3xl font-bold text-[var(--gold)]">
+                                    {currencyLoading ? '...' : currency.displayPrice}
+                                </div>
                             </div>
 
                             <div className="flex gap-4">

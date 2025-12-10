@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe, PRICE_AMOUNT, CURRENCY } from '@/lib/stripe';
+import { stripe } from '@/lib/stripe';
 import { supabase } from '@/lib/supabase';
+import { getCurrencyByCode, currencies, DEFAULT_CURRENCY } from '@/lib/currency';
 
 export async function POST(request: NextRequest) {
     try {
@@ -14,6 +15,7 @@ export async function POST(request: NextRequest) {
             specialMessage,
             messageType,
             email,
+            currency: currencyCode,
         } = body;
 
         // Validate required fields
@@ -24,6 +26,11 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Get currency config (default to GBP)
+        const currencyConfig = currencyCode
+            ? getCurrencyByCode(currencyCode)
+            : currencies[DEFAULT_CURRENCY];
+
         // Create Stripe checkout session
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -31,13 +38,13 @@ export async function POST(request: NextRequest) {
             line_items: [
                 {
                     price_data: {
-                        currency: CURRENCY,
+                        currency: currencyConfig.code.toLowerCase(),
                         product_data: {
                             name: 'Personalized Santa Video Message',
                             description: `A magical video message from Santa for ${childName}`,
                             images: ['https://santagram.app/santa.png'],
                         },
-                        unit_amount: PRICE_AMOUNT,
+                        unit_amount: currencyConfig.price,
                     },
                     quantity: 1,
                 },
@@ -53,6 +60,7 @@ export async function POST(request: NextRequest) {
                 interests: interests || '',
                 specialMessage: specialMessage || '',
                 messageType,
+                currency: currencyConfig.code,
             },
         });
 

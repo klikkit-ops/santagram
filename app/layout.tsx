@@ -3,10 +3,11 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Snowfall from "@/components/Snowfall";
+import { CurrencyProvider } from "@/components/CurrencyProvider";
 
 export const metadata: Metadata = {
   title: "Personalized Santa Video Messages | Create Magical Moments | SantaGram",
-  description: "Create a magical, personalized video message from Santa Claus for your child! Videos where Santa knows their name, achievements & special interests. Ready in minutes. Only $2.99!",
+  description: "Create a magical, personalized video message from Santa Claus for your child! Videos where Santa knows their name, achievements & special interests. Ready in minutes!",
   keywords: "personalized santa video, santa message for kids, custom santa video, christmas video message, santa claus video call, personalized christmas video, santa video for children",
   openGraph: {
     type: "website",
@@ -48,7 +49,7 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Mountains+of+Christmas:wght@400;700&family=Outfit:wght@400;500;600;700&family=Quicksand:wght@500;600;700&display=swap"
           rel="stylesheet"
         />
-        <link rel="icon" href="/logo.png" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -78,12 +79,14 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <Snowfall />
-        <Navbar />
-        <main className="relative z-10">
-          {children}
-        </main>
-        <Footer />
+        <CurrencyProvider>
+          <Snowfall />
+          <Navbar />
+          <main className="relative z-10">
+            {children}
+          </main>
+          <Footer />
+        </CurrencyProvider>
       </body>
     </html>
   );

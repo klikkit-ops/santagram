@@ -1,4 +1,7 @@
+'use client';
+
 import Image from 'next/image';
+import { useCurrency } from './CurrencyProvider';
 
 const steps = [
     {
@@ -12,7 +15,7 @@ const steps = [
         number: '2',
         emoji: '💳',
         title: 'Quick Checkout',
-        description: 'Secure payment for just $2.99. No subscriptions, no hidden fees. One magical video, one simple price.',
+        description: null, // Will be set dynamically
         image: '/rudolph.png',
     },
     {
@@ -25,6 +28,16 @@ const steps = [
 ];
 
 export default function HowItWorks() {
+    const { currency, isLoading } = useCurrency();
+
+    const getStepDescription = (index: number) => {
+        if (index === 1) {
+            const price = isLoading ? '...' : currency.displayPrice;
+            return `Secure payment for just ${price}. No subscriptions, no hidden fees. One magical video, one simple price.`;
+        }
+        return steps[index].description;
+    };
+
     return (
         <section id="how-it-works" className="section-padding relative">
             <div className="max-w-7xl mx-auto">
@@ -62,7 +75,7 @@ export default function HowItWorks() {
                                 {/* Content */}
                                 <div className="text-4xl mb-3">{step.emoji}</div>
                                 <h3 className="text-xl font-bold text-white mb-3">{step.title}</h3>
-                                <p className="text-white/70">{step.description}</p>
+                                <p className="text-white/70">{getStepDescription(index)}</p>
                             </div>
                         </div>
                     ))}

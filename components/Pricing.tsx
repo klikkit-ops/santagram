@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { useCurrency } from './CurrencyProvider';
 
 const features = [
     '🎬 Personalized HD Video Message',
@@ -10,6 +13,8 @@ const features = [
 ];
 
 export default function Pricing() {
+    const { currency, isLoading } = useCurrency();
+
     return (
         <section id="pricing" className="section-padding relative">
             <div className="max-w-4xl mx-auto">
@@ -31,7 +36,9 @@ export default function Pricing() {
                         <div className="text-center md:text-left">
                             <div className="text-white/60 text-lg mb-2">Personalized Santa Video</div>
                             <div className="flex items-baseline justify-center md:justify-start gap-2 mb-4">
-                                <span className="text-6xl font-bold text-white">$2.99</span>
+                                <span className="text-6xl font-bold text-white">
+                                    {isLoading ? '...' : currency.displayPrice}
+                                </span>
                                 <span className="text-white/60">one-time</span>
                             </div>
                             <p className="text-white/70 mb-6">
