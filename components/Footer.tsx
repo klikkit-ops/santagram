@@ -55,9 +55,9 @@ export default function Footer() {
                         <h4 className="text-white font-semibold mb-4">Support</h4>
                         <ul className="space-y-2">
                             <li>
-                                <a href="mailto:support@santagram.app" className="text-white/60 hover:text-white transition-colors">
+                                <Link href="/contact" className="text-white/60 hover:text-white transition-colors">
                                     Contact Us
-                                </a>
+                                </Link>
                             </li>
                             <li>
                                 <Link href="/privacy" className="text-white/60 hover:text-white transition-colors">

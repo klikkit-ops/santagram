@@ -25,12 +25,6 @@ export default function Pricing() {
 
                 {/* Pricing Card */}
                 <div className="glass-card glow-gold relative overflow-hidden">
-                    {/* Popular Badge */}
-                    <div className="absolute -top-1 -right-1">
-                        <div className="bg-[var(--gold)] text-black font-bold px-4 py-1 rounded-bl-xl text-sm">
-                            🌟 MOST POPULAR
-                        </div>
-                    </div>
 
                     <div className="grid md:grid-cols-2 gap-8 items-center">
                         {/* Left Side - Pricing */}
