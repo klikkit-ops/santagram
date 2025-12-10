@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { supabase } from '@/lib/supabase';
-import { getVideoStatus, createVideo } from '@/lib/heygen';
+import { getVideoStatus, createVideo, generateSantaScript } from '@/lib/heygen';
 
 export async function GET(request: NextRequest) {
     try {
@@ -81,15 +81,16 @@ export async function GET(request: NextRequest) {
         if (order.status === 'paid' && !order.heygen_video_id) {
             try {
                 const personalization = order.personalization || {};
-                const videoResult = await createVideo({
+                const script = generateSantaScript({
                     childName: order.child_name,
-                    childAge: order.child_age?.toString() || '',
+                    childAge: order.child_age || undefined,
                     childGender: order.child_gender || '',
                     achievements: personalization.achievements || '',
                     interests: personalization.interests || '',
                     specialMessage: personalization.special_message || '',
                     messageType: order.message_type || 'christmas-morning',
                 });
+                const videoResult = await createVideo(script);
 
                 await supabase
                     .from('orders')
