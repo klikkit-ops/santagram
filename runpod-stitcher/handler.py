@@ -116,27 +116,53 @@ def generate_and_stitch_handler(input_data, r2_config):
                 chunk_url = f"https://pub-{r2_config['account_id']}.r2.dev/{r2_config['bucket_name']}/{chunk_key.lstrip('/')}"
             chunk_urls.append(chunk_url)
             
+            # Verify chunk URL is accessible before creating Replicate prediction
+            print(f"Verifying chunk URL {i+1}/{len(chunk_files)}: {chunk_url}")
+            try:
+                verify_response = requests.head(chunk_url, timeout=10)
+                if not verify_response.ok:
+                    raise ValueError(f"Chunk URL not accessible: {verify_response.status_code}")
+                print(f"Chunk URL {i+1} verified (status: {verify_response.status_code})")
+            except Exception as verify_error:
+                print(f"Warning: Could not verify chunk URL {i+1}: {verify_error}")
+                # Continue anyway - Replicate might be able to access it
+            
             # Create Replicate prediction
             print(f"Creating Replicate prediction {i+1}/{len(chunk_files)}...")
-            prediction_response = requests.post(
-                'https://api.replicate.com/v1/predictions',
-                headers={
-                    'Authorization': f'Token {replicate_api_token}',
-                    'Content-Type': 'application/json',
-                },
-                json={
-                    'model': 'kwaivgi/kling-lip-sync',
-                    'input': {
-                        'video_url': video_url,
-                        'audio_file': chunk_url,
-                    }
-                },
-                timeout=30
-            )
-            prediction_response.raise_for_status()
-            prediction_data = prediction_response.json()
-            prediction_ids.append(prediction_data['id'])
-            print(f"Prediction {i+1} created: {prediction_data['id']}")
+            print(f"  Video URL: {video_url}")
+            print(f"  Audio URL: {chunk_url}")
+            
+            try:
+                prediction_response = requests.post(
+                    'https://api.replicate.com/v1/predictions',
+                    headers={
+                        'Authorization': f'Token {replicate_api_token}',
+                        'Content-Type': 'application/json',
+                    },
+                    json={
+                        'model': 'kwaivgi/kling-lip-sync',
+                        'input': {
+                            'video_url': video_url,
+                            'audio_file': chunk_url,
+                        }
+                    },
+                    timeout=30
+                )
+                
+                # Log response details for debugging
+                print(f"Replicate API response status: {prediction_response.status_code}")
+                if not prediction_response.ok:
+                    error_text = prediction_response.text
+                    print(f"Replicate API error response: {error_text}")
+                    raise ValueError(f"Replicate API error {prediction_response.status_code}: {error_text}")
+                
+                prediction_data = prediction_response.json()
+                prediction_ids.append(prediction_data['id'])
+                print(f"Prediction {i+1} created: {prediction_data['id']}")
+            except requests.exceptions.RequestException as e:
+                error_msg = f"Failed to create Replicate prediction {i+1}: {str(e)}"
+                print(f"ERROR: {error_msg}")
+                raise ValueError(error_msg)
             
             # Rate limiting: wait between predictions (burst limit is 5)
             if i < len(chunk_files) - 1 and (i + 1) % 5 == 0:
