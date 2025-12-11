@@ -116,16 +116,30 @@ def generate_and_stitch_handler(input_data, r2_config):
                 chunk_url = f"https://pub-{r2_config['account_id']}.r2.dev/{r2_config['bucket_name']}/{chunk_key.lstrip('/')}"
             chunk_urls.append(chunk_url)
             
+            # Small delay to ensure R2 URL is accessible
+            time.sleep(0.5)
+            
             # Verify chunk URL is accessible before creating Replicate prediction
             print(f"Verifying chunk URL {i+1}/{len(chunk_files)}: {chunk_url}")
-            try:
-                verify_response = requests.head(chunk_url, timeout=10)
-                if not verify_response.ok:
-                    raise ValueError(f"Chunk URL not accessible: {verify_response.status_code}")
-                print(f"Chunk URL {i+1} verified (status: {verify_response.status_code})")
-            except Exception as verify_error:
-                print(f"Warning: Could not verify chunk URL {i+1}: {verify_error}")
-                # Continue anyway - Replicate might be able to access it
+            max_verify_attempts = 3
+            verified = False
+            for attempt in range(max_verify_attempts):
+                try:
+                    verify_response = requests.head(chunk_url, timeout=10, allow_redirects=True)
+                    if verify_response.ok:
+                        print(f"Chunk URL {i+1} verified (status: {verify_response.status_code})")
+                        verified = True
+                        break
+                    else:
+                        print(f"Chunk URL {i+1} verification attempt {attempt+1} failed: {verify_response.status_code}")
+                except Exception as verify_error:
+                    print(f"Chunk URL {i+1} verification attempt {attempt+1} error: {verify_error}")
+                
+                if attempt < max_verify_attempts - 1:
+                    time.sleep(1)  # Wait before retry
+            
+            if not verified:
+                print(f"Warning: Could not verify chunk URL {i+1} after {max_verify_attempts} attempts, continuing anyway...")
             
             # Create Replicate prediction
             print(f"Creating Replicate prediction {i+1}/{len(chunk_files)}...")
