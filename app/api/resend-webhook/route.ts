@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
                 subject: `[Forwarded] ${emailData.subject || 'No Subject'}`,
                 html: emailData.html || emailData.text || emailData.body?.html || '',
                 text: emailData.text || emailData.body?.text || '',
-                reply_to: emailData.from,
+                replyTo: emailData.from,
             });
 
             console.log(`Email forwarded to jake005588@gmail.com from webhook event`);
