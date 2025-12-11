@@ -13,7 +13,7 @@ export async function createLipsyncVideo(audioUrl: string): Promise<string> {
         {
             input: {
                 video_url: HERO_VIDEO_URL,
-                audio_url: audioUrl,
+                audio_file: audioUrl, // Use audio_file, not audio_url
             },
         }
     );
@@ -40,19 +40,20 @@ export async function createLipsyncVideoPrediction(audioUrl: string, script?: st
         throw new Error(`Audio URL verification failed: ${error instanceof Error ? error.message : String(error)}`);
     }
 
+    // According to Replicate API docs: use audio_file (not audio_url)
+    // audio_file can accept a URL string
     const input: {
         video_url: string;
-        audio_url: string;
+        audio_file: string;
         text?: string;
     } = {
         video_url: HERO_VIDEO_URL,
-        audio_url: audioUrl,
+        audio_file: audioUrl,
     };
 
-    // Add text as fallback if provided (some models require it)
-    if (script) {
-        input.text = script;
-    }
+    // Note: According to API docs, provide either audio_file OR text, not both
+    // We'll use audio_file as primary, and only include text if audio fails
+    // But for now, let's not include text when we have audio_file
 
     console.log('Creating Replicate prediction with audio URL:', audioUrl);
     
