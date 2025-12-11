@@ -205,15 +205,16 @@ export default function CreatePage() {
 
                             <div>
                                 <label className="block text-white/80 mb-2">
-                                    Special Message for Santa to Include (optional)
+                                    Additional Message for Santa to Say (optional)
                                 </label>
                                 <textarea
                                     value={formData.specialMessage}
                                     onChange={(e) => updateFormData('specialMessage', e.target.value)}
-                                    placeholder="e.g., We'll leave cookies by the fireplace! or Don't forget Fluffy the dog!"
+                                    placeholder="e.g., Santa will say: 'I heard you're leaving cookies by the fireplace!' or 'Give Fluffy the dog a pat from me!'"
                                     rows={2}
                                     className="input-festive resize-none"
                                 />
+                                <p className="text-white/50 text-sm mt-1">This will be included in Santa's video message!</p>
                             </div>
 
                             <div className="flex gap-4">
