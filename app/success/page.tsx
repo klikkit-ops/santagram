@@ -54,25 +54,39 @@ function SuccessContent() {
 
     // Track Meta Pixel Purchase event when payment is confirmed
     useEffect(() => {
-        // Only track once when status changes to 'paid' or 'completed'
-        if ((videoStatus.status === 'paid' || videoStatus.status === 'completed') && !purchaseTracked) {
-            // Check if fbq is available (Meta Pixel loaded)
-            if (typeof window !== 'undefined' && (window as any).fbq) {
-                const currency = videoStatus.currency || 'USD';
-                const price = videoStatus.price || 3.99; // Default fallback
-                
-                (window as any).fbq('track', 'Purchase', {
-                    value: price,
-                    currency: currency,
-                    content_name: 'Personalized Santa Video Message',
-                    content_category: 'Video Message',
-                    content_ids: ['santa-video'],
-                    num_items: 1,
-                });
-                
-                console.log('Meta Pixel Purchase event tracked:', { value: price, currency });
-                setPurchaseTracked(true);
-            }
+        // Only track once when payment is confirmed (status is 'paid')
+        // We track on 'paid' status, not 'completed', as that's when the purchase actually happens
+        if (videoStatus.status === 'paid' && !purchaseTracked) {
+            // Wait a bit to ensure Meta Pixel is fully loaded
+            const trackPurchase = () => {
+                if (typeof window !== 'undefined' && (window as any).fbq) {
+                    const currency = videoStatus.currency || 'USD';
+                    const price = videoStatus.price || 3.99; // Default fallback
+                    
+                    // Track Purchase event with required parameters
+                    (window as any).fbq('track', 'Purchase', {
+                        value: price,
+                        currency: currency.toUpperCase(),
+                        content_name: 'Personalized Santa Video Message',
+                        content_category: 'Video Message',
+                        content_ids: ['santa-video'],
+                        num_items: 1,
+                    });
+                    
+                    console.log('[Meta Pixel] Purchase event tracked:', { 
+                        value: price, 
+                        currency: currency.toUpperCase(),
+                        event: 'Purchase'
+                    });
+                    setPurchaseTracked(true);
+                } else {
+                    // Retry after a short delay if fbq isn't ready yet
+                    setTimeout(trackPurchase, 100);
+                }
+            };
+            
+            // Small delay to ensure pixel is loaded
+            setTimeout(trackPurchase, 500);
         }
     }, [videoStatus.status, videoStatus.currency, videoStatus.price, purchaseTracked]);
 
