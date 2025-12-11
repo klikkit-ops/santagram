@@ -61,7 +61,7 @@ def upload_to_r2(local_path, key, r2_config, content_type='application/octet-str
     print(f"Uploaded {local_path} to {key}")
 
 def generate_and_stitch_handler(input_data, r2_config):
-    """Handle full pipeline: split audio, generate videos via Replicate, stitch together"""
+    """Handle simplified pipeline: generate 1 Replicate video for first 25s, loop hero video for rest"""
     audio_key = input_data['audio_key']
     video_url = input_data.get('video_url', 'https://blob.santagram.app/hero/hero.mp4')
     chunk_duration = input_data.get('chunk_duration', 25)
@@ -71,333 +71,210 @@ def generate_and_stitch_handler(input_data, r2_config):
     if not replicate_api_token:
         raise ValueError("Missing replicate_api_token in input")
     
-    print(f"Starting full pipeline: split audio, generate videos, stitch")
-    print(f"Audio key: {audio_key}, Video URL: {video_url}, Chunk duration: {chunk_duration}s")
+    print(f"Starting simplified pipeline: 1 Replicate prediction + looped hero video")
+    print(f"Audio key: {audio_key}, Video URL: {video_url}, First chunk: {chunk_duration}s")
     
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir_path = Path(tmpdir)
         
-        # Step 1: Download and split audio
-        print("Step 1: Downloading and splitting audio...")
+        # Step 1: Download audio and extract first chunk
+        print("Step 1: Downloading audio and extracting first 25 seconds...")
         audio_path = tmpdir_path / "audio.mp3"
         download_from_r2(audio_key, str(audio_path), r2_config)
         
-        # Split audio using ffmpeg
-        output_pattern = tmpdir_path / "chunk_%03d.mp3"
+        # Get full audio duration using ffprobe
+        duration_result = subprocess.run([
+            'ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+            '-of', 'default=noprint_wrappers=1:nokey=1', str(audio_path)
+        ], capture_output=True, text=True, check=True)
+        full_duration = float(duration_result.stdout.strip())
+        print(f"Full audio duration: {full_duration:.2f} seconds")
+        
+        # Extract first chunk (25 seconds)
+        first_chunk_path = tmpdir_path / "first_chunk.mp3"
         subprocess.run([
             'ffmpeg', '-i', str(audio_path),
-            '-f', 'segment',
-            '-segment_time', str(chunk_duration),
+            '-t', str(chunk_duration),
             '-c', 'copy',
-            '-reset_timestamps', '1',
-            '-y', str(output_pattern)
+            '-y', str(first_chunk_path)
         ], capture_output=True, text=True, check=True)
+        print(f"Extracted first {chunk_duration} seconds of audio")
         
-        chunk_files = sorted(tmpdir_path.glob('chunk_*.mp3'))
-        print(f"Audio split into {len(chunk_files)} chunks")
+        # Step 2: Upload first chunk to R2 and create single Replicate prediction
+        print("Step 2: Uploading first chunk and creating single Replicate prediction...")
+        chunk_key = f"audio/chunks/{int(time.time() * 1000)}-first-25s.mp3"
+        upload_to_r2(str(first_chunk_path), chunk_key, r2_config, content_type='audio/mpeg')
         
-        # Step 2: Upload audio chunks to R2 and create Replicate predictions
-        print("Step 2: Uploading chunks and creating Replicate predictions...")
-        base_key = f"audio/chunks/{int(time.time() * 1000)}"
-        chunk_urls = []
-        prediction_ids = []
+        # Construct public URL
+        if r2_config['public_url']:
+            public_url = r2_config['public_url'].rstrip('/')
+            if not public_url.startswith('http://') and not public_url.startswith('https://'):
+                public_url = f"https://{public_url}"
+            chunk_url = f"{public_url}/{chunk_key.lstrip('/')}"
+        else:
+            chunk_url = f"https://pub-{r2_config['account_id']}.r2.dev/{r2_config['bucket_name']}/{chunk_key.lstrip('/')}"
         
-        for i, chunk_file in enumerate(chunk_files):
-            chunk_key = f"{base_key}-chunk-{i + 1}.mp3"
-            upload_to_r2(str(chunk_file), chunk_key, r2_config, content_type='audio/mpeg')
-            
-            # Construct public URL
-            if r2_config['public_url']:
-                public_url = r2_config['public_url'].rstrip('/')
-                if not public_url.startswith('http://') and not public_url.startswith('https://'):
-                    public_url = f"https://{public_url}"
-                chunk_url = f"{public_url}/{chunk_key.lstrip('/')}"
-            else:
-                chunk_url = f"https://pub-{r2_config['account_id']}.r2.dev/{r2_config['bucket_name']}/{chunk_key.lstrip('/')}"
-            chunk_urls.append(chunk_url)
-            
-            # Small delay to ensure R2 URL is accessible
-            time.sleep(0.5)
-            
-            # Verify chunk URL is accessible before creating Replicate prediction
-            print(f"Verifying chunk URL {i+1}/{len(chunk_files)}: {chunk_url}")
-            max_verify_attempts = 3
-            verified = False
-            for attempt in range(max_verify_attempts):
-                try:
-                    verify_response = requests.head(chunk_url, timeout=10, allow_redirects=True)
-                    if verify_response.ok:
-                        print(f"Chunk URL {i+1} verified (status: {verify_response.status_code})")
-                        verified = True
-                        break
-                    else:
-                        print(f"Chunk URL {i+1} verification attempt {attempt+1} failed: {verify_response.status_code}")
-                except Exception as verify_error:
-                    print(f"Chunk URL {i+1} verification attempt {attempt+1} error: {verify_error}")
-                
-                if attempt < max_verify_attempts - 1:
-                    time.sleep(1)  # Wait before retry
-            
-            if not verified:
-                print(f"Warning: Could not verify chunk URL {i+1} after {max_verify_attempts} attempts, continuing anyway...")
-            
-            # Create Replicate prediction
-            print(f"Creating Replicate prediction {i+1}/{len(chunk_files)}...")
-            print(f"  Video URL: {video_url}")
-            print(f"  Audio URL: {chunk_url}")
-            
-            try:
-                # First, get the model version (Replicate REST API requires version, not model name)
-                # We'll use the model name format that works with the REST API
-                # Format: owner/model:version or we can fetch the latest version
-                model_name = 'kwaivgi/kling-lip-sync'
-                
-                # Get the latest version of the model
-                model_response = requests.get(
-                    f'https://api.replicate.com/v1/models/{model_name}',
-                    headers={'Authorization': f'Token {replicate_api_token}'},
-                    timeout=30
-                )
-                
-                if not model_response.ok:
-                    raise ValueError(f"Failed to get model info: {model_response.status_code} - {model_response.text}")
-                
-                model_data = model_response.json()
-                latest_version = model_data.get('latest_version')
-                if not latest_version:
-                    raise ValueError("Model has no latest version")
-                
-                version_id = latest_version.get('id')
-                if not version_id:
-                    raise ValueError("Version ID not found in model data")
-                
-                print(f"  Using model version: {version_id}")
-                
-                # Now create the prediction with the version ID
-                prediction_response = requests.post(
-                    'https://api.replicate.com/v1/predictions',
-                    headers={
-                        'Authorization': f'Token {replicate_api_token}',
-                        'Content-Type': 'application/json',
-                    },
-                    json={
-                        'version': version_id,
-                        'input': {
-                            'video_url': video_url,
-                            'audio_file': chunk_url,
-                        }
-                    },
-                    timeout=30
-                )
-                
-                # Log response details for debugging
-                print(f"Replicate API response status: {prediction_response.status_code}")
-                if not prediction_response.ok:
-                    error_text = prediction_response.text
-                    print(f"Replicate API error response: {error_text}")
-                    raise ValueError(f"Replicate API error {prediction_response.status_code}: {error_text}")
-                
-                prediction_data = prediction_response.json()
-                prediction_ids.append(prediction_data['id'])
-                print(f"Prediction {i+1} created: {prediction_data['id']}")
-            except requests.exceptions.RequestException as e:
-                error_msg = f"Failed to create Replicate prediction {i+1}: {str(e)}"
-                print(f"ERROR: {error_msg}")
-                raise ValueError(error_msg)
-            
-            # Rate limiting: wait between predictions (burst limit is 5)
-            if i < len(chunk_files) - 1 and (i + 1) % 5 == 0:
-                print("Rate limit: waiting 2 seconds before next batch...")
-                time.sleep(2)
+        # Verify chunk URL is accessible
+        print(f"Verifying chunk URL: {chunk_url}")
+        time.sleep(1)  # Small delay for R2 propagation
+        verify_response = requests.head(chunk_url, timeout=10, allow_redirects=True)
+        if not verify_response.ok:
+            print(f"Warning: Chunk URL verification failed: {verify_response.status_code}, continuing anyway...")
         
-        # Step 3: Poll for all predictions to complete with retry logic for failures
-        print(f"Step 3: Polling {len(prediction_ids)} predictions for completion...")
-        video_urls = []
-        max_polls = 300  # 25 minutes max (5 second intervals) - Replicate can take 5-10 min per prediction
-        max_retries = 2  # Retry failed predictions up to 2 times
+        # Get model version
+        model_name = 'kwaivgi/kling-lip-sync'
+        model_response = requests.get(
+            f'https://api.replicate.com/v1/models/{model_name}',
+            headers={'Authorization': f'Token {replicate_api_token}'},
+            timeout=30
+        )
+        model_response.raise_for_status()
+        model_data = model_response.json()
+        version_id = model_data['latest_version']['id']
+        print(f"Using model version: {version_id}")
         
-        # Track predictions with their corresponding chunk URLs for retries
-        prediction_data = list(zip(prediction_ids, chunk_urls))
-        retry_queue = []  # Store (prediction_id, chunk_url, attempt) for retries
+        # Create single Replicate prediction for first 25 seconds
+        print("Creating Replicate prediction for first 25 seconds...")
+        prediction_response = requests.post(
+            'https://api.replicate.com/v1/predictions',
+            headers={
+                'Authorization': f'Token {replicate_api_token}',
+                'Content-Type': 'application/json',
+            },
+            json={
+                'version': version_id,
+                'input': {
+                    'video_url': video_url,
+                    'audio_file': chunk_url,
+                }
+            },
+            timeout=30
+        )
+        prediction_response.raise_for_status()
+        prediction_data = prediction_response.json()
+        prediction_id = prediction_data['id']
+        print(f"Replicate prediction created: {prediction_id}")
         
-        # First pass: poll all initial predictions
-        for idx, (pred_id, chunk_url) in enumerate(prediction_data):
-            completed = False
-            polls = 0
-            while not completed and polls < max_polls:
-                status_response = requests.get(
-                    f'https://api.replicate.com/v1/predictions/{pred_id}',
-                    headers={'Authorization': f'Token {replicate_api_token}'},
-                    timeout=30
-                )
-                status_response.raise_for_status()
-                status_data = status_response.json()
-                
-                if status_data['status'] == 'succeeded':
-                    output = status_data.get('output')
-                    if isinstance(output, str):
-                        video_urls.append(output)
-                    elif isinstance(output, list) and len(output) > 0:
-                        video_urls.append(output[0])
-                    else:
-                        raise ValueError(f"Unexpected output format from Replicate: {output}")
-                    completed = True
-                    print(f"Prediction {pred_id[:8]}... completed (chunk {idx+1}/{len(prediction_data)})")
-                elif status_data['status'] == 'failed':
-                    error = status_data.get('error', 'Unknown error')
-                    print(f"WARNING: Prediction {pred_id[:8]}... failed (chunk {idx+1}/{len(prediction_data)}): {error}")
-                    # Add to retry queue instead of failing immediately
-                    retry_queue.append((chunk_url, idx, 1))  # (chunk_url, original_index, attempt_number)
-                    completed = True  # Mark as "handled" so we move on
-                elif status_data['status'] == 'canceled':
-                    print(f"WARNING: Prediction {pred_id[:8]}... was canceled (chunk {idx+1}/{len(prediction_data)})")
-                    retry_queue.append((chunk_url, idx, 1))
-                    completed = True
-                else:
-                    polls += 1
-                    if polls % 12 == 0:  # Log every minute
-                        print(f"Prediction {pred_id[:8]}... still processing (status: {status_data['status']})")
-                    time.sleep(5)
-            
-            if not completed:
-                print(f"WARNING: Prediction {pred_id[:8]}... timed out (chunk {idx+1}/{len(prediction_data)})")
-                retry_queue.append((chunk_url, idx, 1))
+        # Step 3: Poll for Replicate prediction to complete
+        print("Step 3: Polling Replicate prediction for completion...")
+        max_polls = 300  # 25 minutes max (5 second intervals)
+        replicate_video_url = None
         
-        # Retry failed predictions
-        if retry_queue:
-            print(f"Retrying {len(retry_queue)} failed predictions...")
-            # Get model version once for retries
-            model_name = 'kwaivgi/kling-lip-sync'
-            model_response = requests.get(
-                f'https://api.replicate.com/v1/models/{model_name}',
+        polls = 0
+        while polls < max_polls:
+            status_response = requests.get(
+                f'https://api.replicate.com/v1/predictions/{prediction_id}',
                 headers={'Authorization': f'Token {replicate_api_token}'},
                 timeout=30
             )
-            model_response.raise_for_status()
-            model_data = model_response.json()
-            version_id = model_data['latest_version']['id']
+            status_response.raise_for_status()
+            status_data = status_response.json()
             
-            retry_results = {}  # Map original_index -> video_url
-            
-            for chunk_url, original_idx, attempt in retry_queue:
-                if attempt > max_retries:
-                    print(f"ERROR: Chunk {original_idx+1} failed after {max_retries} retries, skipping")
-                    continue
-                
-                print(f"Retrying chunk {original_idx+1} (attempt {attempt}/{max_retries})...")
-                try:
-                    # Create new prediction for this chunk
-                    retry_response = requests.post(
-                        'https://api.replicate.com/v1/predictions',
-                        headers={
-                            'Authorization': f'Token {replicate_api_token}',
-                            'Content-Type': 'application/json',
-                        },
-                        json={
-                            'version': version_id,
-                            'input': {
-                                'video_url': video_url,
-                                'audio_file': chunk_url,
-                            }
-                        },
-                        timeout=30
-                    )
-                    retry_response.raise_for_status()
-                    retry_pred_data = retry_response.json()
-                    retry_pred_id = retry_pred_data['id']
-                    
-                    # Poll for completion
-                    retry_completed = False
-                    retry_polls = 0
-                    while not retry_completed and retry_polls < max_polls:
-                        retry_status_response = requests.get(
-                            f'https://api.replicate.com/v1/predictions/{retry_pred_id}',
-                            headers={'Authorization': f'Token {replicate_api_token}'},
-                            timeout=30
-                        )
-                        retry_status_response.raise_for_status()
-                        retry_status_data = retry_status_response.json()
-                        
-                        if retry_status_data['status'] == 'succeeded':
-                            output = retry_status_data.get('output')
-                            if isinstance(output, str):
-                                retry_results[original_idx] = output
-                            elif isinstance(output, list) and len(output) > 0:
-                                retry_results[original_idx] = output[0]
-                            retry_completed = True
-                            print(f"Retry successful for chunk {original_idx+1}")
-                        elif retry_status_data['status'] == 'failed':
-                            error = retry_status_data.get('error', 'Unknown error')
-                            print(f"Retry failed for chunk {original_idx+1}: {error}")
-                            if attempt < max_retries:
-                                # Try again
-                                retry_queue.append((chunk_url, original_idx, attempt + 1))
-                            retry_completed = True
-                        else:
-                            retry_polls += 1
-                            if retry_polls % 12 == 0:
-                                print(f"Retry prediction {retry_pred_id[:8]}... still processing")
-                            time.sleep(5)
-                    
-                    if not retry_completed:
-                        print(f"Retry timed out for chunk {original_idx+1}")
-                        if attempt < max_retries:
-                            retry_queue.append((chunk_url, original_idx, attempt + 1))
-                except Exception as retry_error:
-                    print(f"Error during retry for chunk {original_idx+1}: {retry_error}")
-                    if attempt < max_retries:
-                        retry_queue.append((chunk_url, original_idx, attempt + 1))
-            
-            # Merge retry results back into video_urls at correct positions
-            for idx in range(len(prediction_data)):
-                if idx in retry_results:
-                    # Replace with retry result
-                    if idx < len(video_urls):
-                        video_urls[idx] = retry_results[idx]
-                    else:
-                        video_urls.append(retry_results[idx])
-                elif idx >= len(video_urls):
-                    # Original prediction failed and retry also failed
-                    raise ValueError(f"Chunk {idx+1} failed after all retries")
+            if status_data['status'] == 'succeeded':
+                output = status_data.get('output')
+                if isinstance(output, str):
+                    replicate_video_url = output
+                elif isinstance(output, list) and len(output) > 0:
+                    replicate_video_url = output[0]
+                else:
+                    raise ValueError(f"Unexpected output format from Replicate: {output}")
+                print(f"Replicate prediction completed: {prediction_id[:8]}...")
+                break
+            elif status_data['status'] == 'failed':
+                error = status_data.get('error', 'Unknown error')
+                raise ValueError(f"Replicate prediction failed: {error}")
+            elif status_data['status'] == 'canceled':
+                raise ValueError("Replicate prediction was canceled")
+            else:
+                polls += 1
+                if polls % 12 == 0:  # Log every minute
+                    print(f"Replicate prediction still processing (status: {status_data['status']})")
+                time.sleep(5)
         
-        # Verify we have all chunks
-        if len(video_urls) != len(chunk_files):
-            missing = len(chunk_files) - len(video_urls)
-            raise ValueError(f"Missing {missing} video chunk(s) after retries. Cannot proceed with stitching.")
+        if not replicate_video_url:
+            raise ValueError(f"Replicate prediction timed out after {max_polls * 5} seconds")
         
-        print(f"All {len(video_urls)} predictions completed (including retries)")
+        # Step 4: Download Replicate video
+        print("Step 4: Downloading Replicate video...")
+        replicate_video_path = tmpdir_path / "replicate_video.mp4"
+        response = requests.get(replicate_video_url, timeout=300, stream=True)
+        response.raise_for_status()
+        with open(replicate_video_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        print("Replicate video downloaded")
         
-        # Step 4: Download video chunks from Replicate
-        print("Step 4: Downloading video chunks from Replicate...")
-        video_chunk_paths = []
-        for i, video_url in enumerate(video_urls):
-            chunk_path = tmpdir_path / f"video_chunk_{i}.mp4"
-            response = requests.get(video_url, timeout=300, stream=True)
-            response.raise_for_status()
-            with open(chunk_path, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
+        # Step 5: Download hero video and loop it for remaining duration
+        remaining_duration = max(0, full_duration - chunk_duration)
+        print(f"Step 5: Creating looped hero video for remaining {remaining_duration:.2f} seconds...")
+        
+        if remaining_duration > 0:
+            # Download hero video
+            hero_video_path = tmpdir_path / "hero_video.mp4"
+            hero_response = requests.get(video_url, timeout=300, stream=True)
+            hero_response.raise_for_status()
+            with open(hero_video_path, 'wb') as f:
+                for chunk in hero_response.iter_content(chunk_size=8192):
                     f.write(chunk)
-            video_chunk_paths.append(chunk_path)
-            print(f"Downloaded video chunk {i+1}/{len(video_urls)}")
+            
+            # Get hero video duration
+            hero_duration_result = subprocess.run([
+                'ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+                '-of', 'default=noprint_wrappers=1:nokey=1', str(hero_video_path)
+            ], capture_output=True, text=True, check=True)
+            hero_duration = float(hero_duration_result.stdout.strip())
+            print(f"Hero video duration: {hero_duration:.2f} seconds")
+            
+            # Calculate how many loops needed
+            loops_needed = max(1, int(remaining_duration / hero_duration) + 1)
+            print(f"Looping hero video {loops_needed} times to cover {remaining_duration:.2f} seconds")
+            
+            # Create looped hero video
+            looped_hero_path = tmpdir_path / "looped_hero.mp4"
+            # Use ffmpeg to loop the video
+            loop_list = tmpdir_path / "loop_list.txt"
+            with open(loop_list, 'w') as f:
+                for _ in range(loops_needed):
+                    abs_path = hero_video_path.resolve()
+                    f.write(f"file '{abs_path}'\n")
+            
+            subprocess.run([
+                'ffmpeg', '-f', 'concat', '-safe', '0',
+                '-i', str(loop_list),
+                '-c', 'copy',
+                '-y', str(looped_hero_path)
+            ], capture_output=True, text=True, check=True)
+            
+            # Trim to exact remaining duration
+            trimmed_hero_path = tmpdir_path / "trimmed_hero.mp4"
+            subprocess.run([
+                'ffmpeg', '-i', str(looped_hero_path),
+                '-t', str(remaining_duration),
+                '-c', 'copy',
+                '-y', str(trimmed_hero_path)
+            ], capture_output=True, text=True, check=True)
+            
+            # Step 6: Concatenate Replicate video + looped hero video
+            print("Step 6: Concatenating Replicate video with looped hero video...")
+            concat_file = tmpdir_path / "concat.txt"
+            with open(concat_file, 'w') as f:
+                f.write(f"file '{replicate_video_path.resolve()}'\n")
+                f.write(f"file '{trimmed_hero_path.resolve()}'\n")
+            
+            temp_video = tmpdir_path / "temp_video.mp4"
+            subprocess.run([
+                'ffmpeg', '-f', 'concat', '-safe', '0',
+                '-i', str(concat_file),
+                '-c', 'copy',
+                '-y', str(temp_video)
+            ], capture_output=True, text=True, check=True)
+        else:
+            # Audio is 25s or less, just use Replicate video
+            print("Audio is 25s or less, using Replicate video only")
+            temp_video = replicate_video_path
         
-        # Step 5: Stitch video chunks together
-        print("Step 5: Stitching video chunks together...")
-        concat_file = tmpdir_path / "concat.txt"
-        with open(concat_file, 'w') as f:
-            for chunk_path in video_chunk_paths:
-                abs_path = chunk_path.resolve()
-                f.write(f"file '{abs_path}'\n")
-        
-        temp_video = tmpdir_path / "temp_video.mp4"
-        subprocess.run([
-            'ffmpeg', '-f', 'concat', '-safe', '0',
-            '-i', str(concat_file),
-            '-c', 'copy',
-            '-y', str(temp_video)
-        ], capture_output=True, text=True, check=True)
-        
-        # Step 6: Merge with original audio
-        print("Step 6: Merging with original audio...")
+        # Step 7: Merge with original audio
+        print("Step 7: Merging with original audio...")
         final_video = tmpdir_path / "final.mp4"
         subprocess.run([
             'ffmpeg', '-i', str(temp_video),
@@ -406,6 +283,7 @@ def generate_and_stitch_handler(input_data, r2_config):
             '-c:a', 'aac',
             '-map', '0:v:0',
             '-map', '1:a:0',
+            '-shortest',  # Ensure video matches audio length
             '-y', str(final_video)
         ], capture_output=True, text=True, check=True)
         
