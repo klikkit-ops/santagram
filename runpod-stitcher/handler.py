@@ -17,22 +17,44 @@ except ImportError:
 
 def download_from_r2(key, local_path, r2_config):
     """Download file from R2"""
+    from botocore.config import Config
+    
+    # Configure boto3 for R2 with proper SSL settings
+    config = Config(
+        signature_version='s3v4',
+        s3={
+            'addressing_style': 'path'
+        }
+    )
+    
     s3 = boto3.client(
         's3',
         endpoint_url=f"https://{r2_config['account_id']}.r2.cloudflarestorage.com",
         aws_access_key_id=r2_config['access_key_id'],
-        aws_secret_access_key=r2_config['secret_access_key']
+        aws_secret_access_key=r2_config['secret_access_key'],
+        config=config
     )
     s3.download_file(r2_config['bucket_name'], key, local_path)
     print(f"Downloaded {key} to {local_path}")
 
 def upload_to_r2(local_path, key, r2_config):
     """Upload file to R2"""
+    from botocore.config import Config
+    
+    # Configure boto3 for R2 with proper SSL settings
+    config = Config(
+        signature_version='s3v4',
+        s3={
+            'addressing_style': 'path'
+        }
+    )
+    
     s3 = boto3.client(
         's3',
         endpoint_url=f"https://{r2_config['account_id']}.r2.cloudflarestorage.com",
         aws_access_key_id=r2_config['access_key_id'],
-        aws_secret_access_key=r2_config['secret_access_key']
+        aws_secret_access_key=r2_config['secret_access_key'],
+        config=config
     )
     s3.upload_file(local_path, r2_config['bucket_name'], key)
     print(f"Uploaded {local_path} to {key}")
@@ -105,11 +127,34 @@ def handler(event):
         mode = input_data.get('mode', 'stitch_video')
         
         # R2 configuration from input
+        r2_account_id = input_data.get('r2_account_id')
+        r2_access_key_id = input_data.get('r2_access_key_id')
+        r2_secret_access_key = input_data.get('r2_secret_access_key')
+        r2_bucket_name = input_data.get('r2_bucket_name')
+        
+        # Validate R2 credentials (skip if using test/dummy credentials)
+        if not r2_account_id or not r2_access_key_id or not r2_secret_access_key or not r2_bucket_name:
+            error_msg = "Missing R2 credentials in job input"
+            print(f"ERROR: {error_msg}")
+            return {
+                'status': 'FAILED',
+                'error': error_msg
+            }
+        
+        # Check if using test/dummy credentials
+        if 'test' in r2_account_id.lower() or 'test' in r2_bucket_name.lower():
+            error_msg = "Invalid R2 credentials: test/dummy credentials detected"
+            print(f"ERROR: {error_msg}")
+            return {
+                'status': 'FAILED',
+                'error': error_msg
+            }
+        
         r2_config = {
-            'account_id': input_data['r2_account_id'],
-            'access_key_id': input_data['r2_access_key_id'],
-            'secret_access_key': input_data['r2_secret_access_key'],
-            'bucket_name': input_data['r2_bucket_name'],
+            'account_id': r2_account_id,
+            'access_key_id': r2_access_key_id,
+            'secret_access_key': r2_secret_access_key,
+            'bucket_name': r2_bucket_name,
             'public_url': input_data.get('r2_public_url', '')
         }
         
