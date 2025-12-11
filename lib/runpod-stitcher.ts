@@ -90,10 +90,12 @@ export async function stitchVideoChunks(
         while (attempts < maxAttempts) {
             await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
 
+            // Use the same domain that worked for the initial request
+            const statusDomain = endpointUrl!.includes('api.runpod.ai') ? 'api.runpod.ai' : 'api.runpod.io';
             const statusResponse = await fetch(
                 RUNPOD_ENDPOINT_ID
-                    ? `https://api.runpod.ai/v2/${RUNPOD_ENDPOINT_ID}/status/${jobId}`
-                    : `https://api.runpod.ai/v2/status/${jobId}`,
+                    ? `https://${statusDomain}/v2/${RUNPOD_ENDPOINT_ID}/status/${jobId}`
+                    : `https://${statusDomain}/v2/status/${jobId}`,
                 {
                     headers: {
                         'Authorization': `Bearer ${RUNPOD_API_KEY}`,
@@ -197,106 +199,108 @@ export async function splitAudioWithRunPod(
         };
 
         // Submit job to RunPod
-        // For RunPod Serverless, try both api.runpod.io and api.runpod.ai
-        // Some accounts/regions use different domains
-        const endpointUrl = `https://api.runpod.ai/v2/${RUNPOD_ENDPOINT_ID}/run`;
-        console.log(`[splitAudioWithRunPod] Submitting job to RunPod endpoint: ${endpointUrl}`);
-        
-        // First, try to get endpoint status to verify it exists and is accessible
-        try {
-            const statusUrl = `https://api.runpod.ai/v2/${RUNPOD_ENDPOINT_ID}/status`;
-            const statusResponse = await fetch(statusUrl, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${RUNPOD_API_KEY}`,
-                },
-            });
-            console.log(`[splitAudioWithRunPod] Endpoint status check: ${statusResponse.status} ${statusResponse.statusText}`);
-            if (!statusResponse.ok) {
-                const statusText = await statusResponse.text();
-                console.error(`[splitAudioWithRunPod] Endpoint status check failed:`, statusText);
-            }
-        } catch (statusError) {
-            console.warn(`[splitAudioWithRunPod] Status check failed (continuing anyway):`, statusError);
-        }
-        console.log(`[splitAudioWithRunPod] Job input (without secrets):`, {
-            mode: jobInput.input.mode,
-            audio_key: jobInput.input.audio_key,
-            chunk_duration: jobInput.input.chunk_duration,
-            has_r2_config: !!(jobInput.input.r2_account_id && jobInput.input.r2_bucket_name),
-        });
+        // Try both api.runpod.ai and api.runpod.io (different accounts use different domains)
+        // Start with api.runpod.ai as it's more commonly used
+        const domains = ['api.runpod.ai', 'api.runpod.io'];
+        let endpointUrl: string | null = null;
+        let lastError: Error | null = null;
 
-        const response = await fetch(endpointUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${RUNPOD_API_KEY}`,
-            },
-            body: JSON.stringify(jobInput),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`[splitAudioWithRunPod] RunPod API error:`, {
-                status: response.status,
-                statusText: response.statusText,
-                error: errorText,
-                endpointUrl,
-            });
-            throw new Error(`RunPod API error: ${response.status} ${response.statusText} - ${errorText}`);
-        }
-
-        const result = await response.json();
-        const jobId = result.id;
-
-        console.log(`[splitAudioWithRunPod] RunPod job submitted: ${jobId}`);
-
-        // Poll for job completion
-        const maxAttempts = 60; // 5 minutes max (5 second intervals)
-        let attempts = 0;
-
-        while (attempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
-
-            const statusResponse = await fetch(
-                `https://api.runpod.io/v2/${RUNPOD_ENDPOINT_ID}/status/${jobId}`,
-                {
+        // Try each domain with the actual request
+        for (const domain of domains) {
+            const url = `https://${domain}/v2/${RUNPOD_ENDPOINT_ID}/run`;
+            console.log(`[splitAudioWithRunPod] Trying domain: ${domain}`);
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
                     headers: {
+                        'Content-Type': 'application/json',
                         'Authorization': `Bearer ${RUNPOD_API_KEY}`,
                     },
-                }
-            );
+                    body: JSON.stringify(jobInput),
+                });
 
-            if (!statusResponse.ok) {
-                throw new Error(`Failed to check RunPod job status: ${statusResponse.status}`);
-            }
-
-            const statusResult = await statusResponse.json();
-            const status = statusResult.status;
-
-            console.log(`[splitAudioWithRunPod] Job status: ${status} (attempt ${attempts + 1}/${maxAttempts})`);
-
-            if (status === 'COMPLETED') {
-                // Job completed, get the output
-                const output = statusResult.output;
-                if (output && output.chunk_urls && Array.isArray(output.chunk_urls)) {
-                    console.log(`[splitAudioWithRunPod] Audio split into ${output.chunk_urls.length} chunks`);
-                    return output.chunk_urls;
+                if (response.status !== 404) {
+                    endpointUrl = url;
+                    console.log(`[splitAudioWithRunPod] Domain ${domain} responded (status: ${response.status})`);
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`RunPod API error: ${response.status} ${response.statusText} - ${errorText}`);
+                    }
+                    
+                    // Success - parse and return the result
+                    const result = await response.json();
+                    const jobId = result.id;
+                    console.log(`[splitAudioWithRunPod] RunPod job submitted on ${domain}: ${jobId}`);
+                    
+                    // Continue with polling using the same domain
+                    return await pollJobStatus(jobId, domain);
                 } else {
-                    throw new Error('RunPod job completed but no chunk_urls in output');
+                    console.log(`[splitAudioWithRunPod] Domain ${domain} returned 404, trying next...`);
+                    lastError = new Error(`404 Not Found on ${domain}`);
                 }
-            } else if (status === 'FAILED') {
-                const error = statusResult.error || 'Unknown error';
-                throw new Error(`RunPod job failed: ${error}`);
+            } catch (error) {
+                console.warn(`[splitAudioWithRunPod] Domain ${domain} failed:`, error);
+                lastError = error instanceof Error ? error : new Error(String(error));
+                continue;
             }
-
-            attempts++;
         }
 
-        throw new Error('RunPod job timed out');
+        // If we get here, both domains failed
+        throw new Error(`RunPod endpoint not accessible on any domain (tried: ${domains.join(', ')}). Last error: ${lastError?.message || 'Unknown'}`);
     } catch (error) {
         console.error('[splitAudioWithRunPod] Error:', error);
         throw new Error(`Failed to split audio: ${error instanceof Error ? error.message : String(error)}`);
     }
+}
+
+/**
+ * Poll RunPod job status until completion
+ */
+async function pollJobStatus(jobId: string, domain: string): Promise<string[]> {
+    const RUNPOD_API_KEY = process.env.RUNPOD_API_KEY;
+    const RUNPOD_ENDPOINT_ID = process.env.RUNPOD_ENDPOINT_ID;
+    const maxAttempts = 60; // 5 minutes max (5 second intervals)
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+
+        const statusResponse = await fetch(
+            `https://${domain}/v2/${RUNPOD_ENDPOINT_ID}/status/${jobId}`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${RUNPOD_API_KEY}`,
+                },
+            }
+        );
+
+        if (!statusResponse.ok) {
+            throw new Error(`Failed to check RunPod job status: ${statusResponse.status}`);
+        }
+
+        const statusResult = await statusResponse.json();
+        const status = statusResult.status;
+
+        console.log(`[splitAudioWithRunPod] Job status: ${status} (attempt ${attempts + 1}/${maxAttempts})`);
+
+        if (status === 'COMPLETED') {
+            const output = statusResult.output;
+            if (output && output.chunk_urls && Array.isArray(output.chunk_urls)) {
+                console.log(`[splitAudioWithRunPod] Audio split into ${output.chunk_urls.length} chunks`);
+                return output.chunk_urls;
+            } else {
+                throw new Error('RunPod job completed but no chunk_urls in output');
+            }
+        } else if (status === 'FAILED') {
+            const error = statusResult.error || 'Unknown error';
+            throw new Error(`RunPod job failed: ${error}`);
+        }
+
+        attempts++;
+    }
+
+    throw new Error('RunPod job timed out');
 }
 
