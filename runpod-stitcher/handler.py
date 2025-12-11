@@ -307,8 +307,8 @@ def generate_and_stitch_handler(input_data, r2_config):
             '-y', str(final_video)
         ], capture_output=True, text=True, check=True)
         
-        # Step 7: Upload final video to R2
-        print(f"Step 7: Uploading final video to R2: {output_key}")
+        # Step 8: Upload final video to R2
+        print(f"Step 8: Uploading final video to R2: {output_key}")
         upload_to_r2(str(final_video), output_key, r2_config, content_type='video/mp4')
         
         # Construct public URL
