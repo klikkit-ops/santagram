@@ -64,7 +64,8 @@ def split_audio_handler(input_data, r2_config):
         print(f"Generated {len(chunk_files)} audio chunks")
         
         # Upload each chunk to R2
-        base_key = f"audio/chunks/{int(audio_path.stat().st_mtime * 1000)}"
+        import time
+        base_key = f"audio/chunks/{int(time.time() * 1000)}"
         for i, chunk_file in enumerate(chunk_files):
             chunk_key = f"{base_key}-chunk-{i + 1}.mp3"
             upload_to_r2(str(chunk_file), chunk_key, r2_config)
