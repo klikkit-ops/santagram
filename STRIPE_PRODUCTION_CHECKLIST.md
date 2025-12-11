@@ -106,8 +106,11 @@ This checklist will guide you through moving from Stripe test/sandbox mode to pr
 ## Step 9: Configure Tax Settings (if applicable)
 
 - [ ] Go to [Stripe Dashboard > Settings > Tax](https://dashboard.stripe.com/settings/tax)
-- [ ] Enable automatic tax calculation if required in your region
-- [ ] Configure tax rates for your location
+- [ ] Review the "Multi-Currency Pricing Configuration" section below for detailed tax setup
+- [ ] Enable Stripe Tax for automatic tax calculation (recommended for EU and US)
+- [ ] Configure your business location and tax registration numbers
+- [ ] Set up VAT registration if selling to EU customers
+- [ ] Configure US sales tax nexus if applicable
 - [ ] **Important**: Consult with a tax professional about your obligations
 
 ---
@@ -228,6 +231,114 @@ If something goes wrong:
 - [Stripe Support](https://support.stripe.com)
 - [Stripe Status](https://status.stripe.com)
 - [Stripe Dashboard](https://dashboard.stripe.com)
+
+---
+
+## Multi-Currency Pricing Configuration
+
+Your app supports automatic currency detection and pricing for multiple countries. Here's the complete pricing structure:
+
+### Supported Countries and Prices
+
+| Country | Currency | Price | Stripe Amount (cents) |
+|---------|----------|-------|----------------------|
+| 🇬🇧 United Kingdom | GBP | £2.99 | 299 |
+| 🇺🇸 United States | USD | $3.99 | 399 |
+| 🇪🇺 Eurozone* | EUR | €3.49 | 349 |
+| 🇨🇦 Canada | CAD | CA$4.99 | 499 |
+| 🇦🇺 Australia | AUD | A$5.99 | 599 |
+| 🇳🇿 New Zealand | NZD | NZ$6.49 | 649 |
+| 🇨🇭 Switzerland | CHF | CHF 3.49 | 349 |
+| 🇸🇪 Sweden | SEK | 39.99 kr | 3999 |
+| 🇳🇴 Norway | NOK | 39.99 kr | 3999 |
+| 🇩🇰 Denmark | DKK | 24.99 kr | 2499 |
+| 🇵🇱 Poland | PLN | 14.99 zł | 1499 |
+| 🇮🇳 India | INR | ₹299 | 29900 |
+| 🇯🇵 Japan | JPY | ¥599 | 599 |
+| 🇸🇬 Singapore | SGD | S$4.99 | 499 |
+| 🇭🇰 Hong Kong | HKD | HK$29.99 | 2999 |
+| 🇲🇽 Mexico | MXN | MX$69.99 | 6999 |
+| 🇧🇷 Brazil | BRL | R$19.99 | 1999 |
+| 🇿🇦 South Africa | ZAR | R69.99 | 6999 |
+
+*Eurozone countries: Germany (DE), France (FR), Italy (IT), Spain (ES), Netherlands (NL), Belgium (BE), Austria (AT), Ireland (IE), Portugal (PT), Finland (FI), Greece (GR)
+
+**Default currency**: GBP (£2.99) - used for countries not in the list above
+
+### Stripe Multi-Currency Setup
+
+- [ ] **Verify Stripe Account Supports All Currencies**
+  - Go to [Stripe Dashboard > Settings > Business settings](https://dashboard.stripe.com/settings/business)
+  - Check that your account can accept payments in all supported currencies
+  - Some currencies may require additional verification or account setup
+
+- [ ] **Enable Required Payment Methods**
+  - Go to [Stripe Dashboard > Settings > Payment methods](https://dashboard.stripe.com/settings/payment_methods)
+  - Ensure Cards are enabled (required for all currencies)
+  - Consider enabling local payment methods for better conversion:
+    - **Europe**: SEPA Direct Debit, iDEAL (Netherlands), Bancontact (Belgium)
+    - **Asia**: Alipay, WeChat Pay (if applicable)
+    - **Latin America**: OXXO (Mexico), Boleto (Brazil)
+
+- [ ] **Configure Currency Conversion (if needed)**
+  - Stripe automatically handles currency conversion
+  - Review [Stripe's currency conversion documentation](https://stripe.com/docs/currencies/conversion)
+  - Consider if you want to accept payments in customer's local currency or convert to your base currency
+
+### Tax and VAT Considerations by Region
+
+- [ ] **European Union (EU) - VAT**
+  - If you're based in the EU or selling to EU customers, you may need to:
+    - Register for VAT in applicable countries
+    - Enable Stripe Tax for automatic VAT calculation
+    - Display VAT-inclusive prices where required
+  - Go to [Stripe Dashboard > Settings > Tax](https://dashboard.stripe.com/settings/tax)
+  - Enable "Stripe Tax" for automatic tax calculation
+  - Configure your business location and tax registration numbers
+
+- [ ] **United States - Sales Tax**
+  - If you have nexus in US states, enable Stripe Tax
+  - Stripe can automatically calculate and collect sales tax
+  - Configure your business address and nexus states
+
+- [ ] **Other Countries**
+  - Review tax obligations for each country you're selling to
+  - Consult with a tax professional about international tax requirements
+  - Consider using Stripe Tax for automatic calculation
+
+### Testing Multi-Currency Payments
+
+Before going live, test payments in different currencies:
+
+- [ ] Test payment in GBP (base currency)
+- [ ] Test payment in USD (most common)
+- [ ] Test payment in EUR (European market)
+- [ ] Test payment in a high-value currency (e.g., AUD, NZD)
+- [ ] Test payment in a currency with different decimal places (e.g., JPY - no decimals)
+- [ ] Verify currency detection works correctly:
+  - Test from different IP addresses/locations
+  - Verify correct currency is displayed
+  - Verify correct amount is charged
+
+### Currency Display and Formatting
+
+Your app automatically:
+- Detects user's country via IP geolocation
+- Displays price in local currency
+- Formats currency correctly (symbols, decimal places)
+- Falls back to GBP if country not detected
+
+**No additional Stripe configuration needed** - the app handles currency selection and formatting client-side.
+
+### Monitoring Multi-Currency Payments
+
+After going live, monitor:
+
+- [ ] Payment distribution by currency
+- [ ] Conversion rates for different currencies
+- [ ] Failed payments by currency (some currencies may have higher failure rates)
+- [ ] Refund requests by currency
+- [ ] Currency conversion fees (if applicable)
 
 ---
 
