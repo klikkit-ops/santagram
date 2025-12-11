@@ -210,12 +210,18 @@ def generate_and_stitch_handler(input_data, r2_config):
                 print("Rate limit: waiting 2 seconds before next batch...")
                 time.sleep(2)
         
-        # Step 3: Poll for all predictions to complete
+        # Step 3: Poll for all predictions to complete with retry logic for failures
         print(f"Step 3: Polling {len(prediction_ids)} predictions for completion...")
         video_urls = []
         max_polls = 300  # 25 minutes max (5 second intervals) - Replicate can take 5-10 min per prediction
+        max_retries = 2  # Retry failed predictions up to 2 times
         
-        for pred_id in prediction_ids:
+        # Track predictions with their corresponding chunk URLs for retries
+        prediction_data = list(zip(prediction_ids, chunk_urls))
+        retry_queue = []  # Store (prediction_id, chunk_url, attempt) for retries
+        
+        # First pass: poll all initial predictions
+        for idx, (pred_id, chunk_url) in enumerate(prediction_data):
             completed = False
             polls = 0
             while not completed and polls < max_polls:
@@ -236,12 +242,17 @@ def generate_and_stitch_handler(input_data, r2_config):
                     else:
                         raise ValueError(f"Unexpected output format from Replicate: {output}")
                     completed = True
-                    print(f"Prediction {pred_id[:8]}... completed")
+                    print(f"Prediction {pred_id[:8]}... completed (chunk {idx+1}/{len(prediction_data)})")
                 elif status_data['status'] == 'failed':
                     error = status_data.get('error', 'Unknown error')
-                    raise ValueError(f"Replicate prediction {pred_id} failed: {error}")
+                    print(f"WARNING: Prediction {pred_id[:8]}... failed (chunk {idx+1}/{len(prediction_data)}): {error}")
+                    # Add to retry queue instead of failing immediately
+                    retry_queue.append((chunk_url, idx, 1))  # (chunk_url, original_index, attempt_number)
+                    completed = True  # Mark as "handled" so we move on
                 elif status_data['status'] == 'canceled':
-                    raise ValueError(f"Replicate prediction {pred_id} was canceled")
+                    print(f"WARNING: Prediction {pred_id[:8]}... was canceled (chunk {idx+1}/{len(prediction_data)})")
+                    retry_queue.append((chunk_url, idx, 1))
+                    completed = True
                 else:
                     polls += 1
                     if polls % 12 == 0:  # Log every minute
@@ -249,9 +260,112 @@ def generate_and_stitch_handler(input_data, r2_config):
                     time.sleep(5)
             
             if not completed:
-                raise ValueError(f"Prediction {pred_id} timed out after {max_polls * 5} seconds")
+                print(f"WARNING: Prediction {pred_id[:8]}... timed out (chunk {idx+1}/{len(prediction_data)})")
+                retry_queue.append((chunk_url, idx, 1))
         
-        print(f"All {len(video_urls)} predictions completed")
+        # Retry failed predictions
+        if retry_queue:
+            print(f"Retrying {len(retry_queue)} failed predictions...")
+            # Get model version once for retries
+            model_name = 'kwaivgi/kling-lip-sync'
+            model_response = requests.get(
+                f'https://api.replicate.com/v1/models/{model_name}',
+                headers={'Authorization': f'Token {replicate_api_token}'},
+                timeout=30
+            )
+            model_response.raise_for_status()
+            model_data = model_response.json()
+            version_id = model_data['latest_version']['id']
+            
+            retry_results = {}  # Map original_index -> video_url
+            
+            for chunk_url, original_idx, attempt in retry_queue:
+                if attempt > max_retries:
+                    print(f"ERROR: Chunk {original_idx+1} failed after {max_retries} retries, skipping")
+                    continue
+                
+                print(f"Retrying chunk {original_idx+1} (attempt {attempt}/{max_retries})...")
+                try:
+                    # Create new prediction for this chunk
+                    retry_response = requests.post(
+                        'https://api.replicate.com/v1/predictions',
+                        headers={
+                            'Authorization': f'Token {replicate_api_token}',
+                            'Content-Type': 'application/json',
+                        },
+                        json={
+                            'version': version_id,
+                            'input': {
+                                'video_url': video_url,
+                                'audio_file': chunk_url,
+                            }
+                        },
+                        timeout=30
+                    )
+                    retry_response.raise_for_status()
+                    retry_pred_data = retry_response.json()
+                    retry_pred_id = retry_pred_data['id']
+                    
+                    # Poll for completion
+                    retry_completed = False
+                    retry_polls = 0
+                    while not retry_completed and retry_polls < max_polls:
+                        retry_status_response = requests.get(
+                            f'https://api.replicate.com/v1/predictions/{retry_pred_id}',
+                            headers={'Authorization': f'Token {replicate_api_token}'},
+                            timeout=30
+                        )
+                        retry_status_response.raise_for_status()
+                        retry_status_data = retry_status_response.json()
+                        
+                        if retry_status_data['status'] == 'succeeded':
+                            output = retry_status_data.get('output')
+                            if isinstance(output, str):
+                                retry_results[original_idx] = output
+                            elif isinstance(output, list) and len(output) > 0:
+                                retry_results[original_idx] = output[0]
+                            retry_completed = True
+                            print(f"Retry successful for chunk {original_idx+1}")
+                        elif retry_status_data['status'] == 'failed':
+                            error = retry_status_data.get('error', 'Unknown error')
+                            print(f"Retry failed for chunk {original_idx+1}: {error}")
+                            if attempt < max_retries:
+                                # Try again
+                                retry_queue.append((chunk_url, original_idx, attempt + 1))
+                            retry_completed = True
+                        else:
+                            retry_polls += 1
+                            if retry_polls % 12 == 0:
+                                print(f"Retry prediction {retry_pred_id[:8]}... still processing")
+                            time.sleep(5)
+                    
+                    if not retry_completed:
+                        print(f"Retry timed out for chunk {original_idx+1}")
+                        if attempt < max_retries:
+                            retry_queue.append((chunk_url, original_idx, attempt + 1))
+                except Exception as retry_error:
+                    print(f"Error during retry for chunk {original_idx+1}: {retry_error}")
+                    if attempt < max_retries:
+                        retry_queue.append((chunk_url, original_idx, attempt + 1))
+            
+            # Merge retry results back into video_urls at correct positions
+            for idx in range(len(prediction_data)):
+                if idx in retry_results:
+                    # Replace with retry result
+                    if idx < len(video_urls):
+                        video_urls[idx] = retry_results[idx]
+                    else:
+                        video_urls.append(retry_results[idx])
+                elif idx >= len(video_urls):
+                    # Original prediction failed and retry also failed
+                    raise ValueError(f"Chunk {idx+1} failed after all retries")
+        
+        # Verify we have all chunks
+        if len(video_urls) != len(chunk_files):
+            missing = len(chunk_files) - len(video_urls)
+            raise ValueError(f"Missing {missing} video chunk(s) after retries. Cannot proceed with stitching.")
+        
+        print(f"All {len(video_urls)} predictions completed (including retries)")
         
         # Step 4: Download video chunks from Replicate
         print("Step 4: Downloading video chunks from Replicate...")
