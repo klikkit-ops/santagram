@@ -200,17 +200,22 @@ export async function splitAudioWithRunPod(
         const endpointUrl = `https://api.runpod.io/v2/${RUNPOD_ENDPOINT_ID}/run`;
         console.log(`[splitAudioWithRunPod] Submitting job to RunPod endpoint: ${endpointUrl}`);
         
-        // First, verify the endpoint exists by checking its status
+        // First, try to get endpoint status to verify it exists and is accessible
         try {
-            const healthCheckUrl = `https://api.runpod.io/v2/${RUNPOD_ENDPOINT_ID}/health`;
-            const healthResponse = await fetch(healthCheckUrl, {
+            const statusUrl = `https://api.runpod.io/v2/${RUNPOD_ENDPOINT_ID}/status`;
+            const statusResponse = await fetch(statusUrl, {
+                method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${RUNPOD_API_KEY}`,
                 },
             });
-            console.log(`[splitAudioWithRunPod] Endpoint health check: ${healthResponse.status} ${healthResponse.statusText}`);
-        } catch (healthError) {
-            console.warn(`[splitAudioWithRunPod] Health check failed (this is okay):`, healthError);
+            console.log(`[splitAudioWithRunPod] Endpoint status check: ${statusResponse.status} ${statusResponse.statusText}`);
+            if (!statusResponse.ok) {
+                const statusText = await statusResponse.text();
+                console.error(`[splitAudioWithRunPod] Endpoint status check failed:`, statusText);
+            }
+        } catch (statusError) {
+            console.warn(`[splitAudioWithRunPod] Status check failed (continuing anyway):`, statusError);
         }
         console.log(`[splitAudioWithRunPod] Job input (without secrets):`, {
             mode: jobInput.input.mode,
