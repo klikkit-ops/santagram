@@ -101,9 +101,13 @@ def split_audio_handler(input_data, r2_config):
             upload_to_r2(str(chunk_file), chunk_key, r2_config)
             chunk_keys.append(chunk_key)
             
-            # Construct public URL
+            # Construct public URL - ensure it has https:// protocol
             if r2_config['public_url']:
-                chunk_url = f"{r2_config['public_url'].rstrip('/')}/{chunk_key.lstrip('/')}"
+                public_url = r2_config['public_url'].rstrip('/')
+                # Add https:// if missing
+                if not public_url.startswith('http://') and not public_url.startswith('https://'):
+                    public_url = f"https://{public_url}"
+                chunk_url = f"{public_url}/{chunk_key.lstrip('/')}"
             else:
                 chunk_url = f"https://pub-{r2_config['account_id']}.r2.dev/{r2_config['bucket_name']}/{chunk_key.lstrip('/')}"
             chunk_paths.append(chunk_url)
@@ -224,9 +228,13 @@ def handler(event):
             print(f"Uploading final video to R2: {output_key}")
             upload_to_r2(str(final_video), output_key, r2_config)
             
-            # Construct public URL
+            # Construct public URL - ensure it has https:// protocol
             if r2_config['public_url']:
-                public_url = f"{r2_config['public_url'].rstrip('/')}/{output_key.lstrip('/')}"
+                base_url = r2_config['public_url'].rstrip('/')
+                # Add https:// if missing
+                if not base_url.startswith('http://') and not base_url.startswith('https://'):
+                    base_url = f"https://{base_url}"
+                public_url = f"{base_url}/{output_key.lstrip('/')}"
             else:
                 public_url = f"https://pub-{r2_config['account_id']}.r2.dev/{r2_config['bucket_name']}/{output_key.lstrip('/')}"
             
