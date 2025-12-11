@@ -72,6 +72,14 @@ export async function getLipsyncPredictionStatus(predictionId: string): Promise<
     error?: string;
 }> {
     const prediction = await replicate.predictions.get(predictionId);
+    
+    console.log(`Replicate prediction status for ${predictionId}:`, {
+        status: prediction.status,
+        output: prediction.output,
+        outputType: typeof prediction.output,
+        isArray: Array.isArray(prediction.output),
+        error: prediction.error,
+    });
 
     // Map any unexpected status to a known status
     let status: 'starting' | 'processing' | 'succeeded' | 'failed' | 'canceled';
@@ -95,9 +103,25 @@ export async function getLipsyncPredictionStatus(predictionId: string): Promise<
             status = 'failed';
     }
 
+    // Handle output - it might be a string, array, or other format
+    let output: string | undefined;
+    if (prediction.output) {
+        if (typeof prediction.output === 'string') {
+            output = prediction.output;
+        } else if (Array.isArray(prediction.output) && prediction.output.length > 0) {
+            // If output is an array, take the first element
+            output = typeof prediction.output[0] === 'string' ? prediction.output[0] : String(prediction.output[0]);
+            console.log(`Replicate output was array, using first element: ${output}`);
+        } else {
+            // Try to convert to string
+            output = String(prediction.output);
+            console.log(`Replicate output converted to string: ${output}`);
+        }
+    }
+
     return {
         status,
-        output: prediction.output as string | undefined,
+        output,
         error: prediction.error as string | undefined,
     };
 }

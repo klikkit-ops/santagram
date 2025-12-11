@@ -12,21 +12,55 @@ function getResendClient() {
 }
 
 export async function storeVideo(videoUrl: string, orderId: string): Promise<string> {
+    if (!videoUrl || typeof videoUrl !== 'string') {
+        throw new Error(`Invalid video URL provided: ${videoUrl}`);
+    }
+    
+    console.log(`[storeVideo] Starting video storage process for order ${orderId}`);
+    console.log(`[storeVideo] Video URL from Replicate: ${videoUrl}`);
+    
+    // Verify the URL is accessible before downloading
+    try {
+        const headResponse = await fetch(videoUrl, { method: 'HEAD' });
+        if (!headResponse.ok) {
+            throw new Error(`Video URL not accessible: ${headResponse.status} ${headResponse.statusText}`);
+        }
+        const contentType = headResponse.headers.get('content-type');
+        console.log(`[storeVideo] Video URL verified, content-type: ${contentType}`);
+    } catch (error) {
+        console.error(`[storeVideo] Error verifying video URL:`, error);
+        throw new Error(`Video URL verification failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    
     // Download video from Replicate output URL
+    console.log(`[storeVideo] Downloading video from Replicate...`);
     const response = await fetch(videoUrl);
     if (!response.ok) {
-        throw new Error(`Failed to download video: ${response.statusText}`);
+        throw new Error(`Failed to download video: ${response.status} ${response.statusText}`);
     }
 
     const videoBuffer = await response.arrayBuffer();
+    if (videoBuffer.byteLength === 0) {
+        throw new Error('Downloaded video is empty');
+    }
+    console.log(`[storeVideo] Video downloaded successfully, size: ${videoBuffer.byteLength} bytes`);
 
     // Upload to Vercel Blob for permanent storage
-    const blob = await put(`videos/${orderId}-santa-message.mp4`, Buffer.from(videoBuffer), {
-        access: 'public',
-        contentType: 'video/mp4',
-    });
+    const blobName = `videos/${orderId}-santa-message.mp4`;
+    console.log(`[storeVideo] Uploading video to Vercel Blob: ${blobName}`);
+    
+    try {
+        const blob = await put(blobName, Buffer.from(videoBuffer), {
+            access: 'public',
+            contentType: 'video/mp4',
+        });
 
-    return blob.url;
+        console.log(`[storeVideo] Video stored successfully at: ${blob.url}`);
+        return blob.url;
+    } catch (blobError) {
+        console.error(`[storeVideo] Error uploading to Vercel Blob:`, blobError);
+        throw new Error(`Failed to upload video to Vercel Blob: ${blobError instanceof Error ? blobError.message : String(blobError)}`);
+    }
 }
 
 export async function sendVideoEmail(
@@ -34,8 +68,10 @@ export async function sendVideoEmail(
     videoUrl: string,
     childName: string
 ): Promise<void> {
+    console.log(`Sending video email to: ${email}`);
+    
     const resend = getResendClient();
-    await resend.emails.send({
+    const result = await resend.emails.send({
         from: EMAIL_FROM,
         to: email,
         subject: `🎅 Santa's Special Message for ${childName} is Ready!`,
@@ -73,4 +109,11 @@ export async function sendVideoEmail(
             </html>
         `,
     });
+    
+    if (result.error) {
+        console.error('Resend API error:', result.error);
+        throw new Error(`Failed to send email: ${result.error.message || 'Unknown error'}`);
+    }
+    
+    console.log(`Email sent successfully. Email ID: ${result.data?.id || 'unknown'}`);
 }

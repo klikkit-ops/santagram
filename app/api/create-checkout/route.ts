@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
         const { error: dbError } = await supabase.from('orders').insert({
             stripe_session_id: session.id,
             email,
+            customer_email: email, // Also set customer_email for email delivery
             child_name: childName,
             child_age: childAge ? parseInt(childAge) : null,
             child_gender: childGender,

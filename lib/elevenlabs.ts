@@ -23,6 +23,7 @@ export async function generateSpeech(script: string): Promise<string> {
                 voice_settings: {
                     stability: 0.5,
                     similarity_boost: 0.75,
+                    speed: 0.75, // Set speech speed to 0.75 (slower, more natural pace)
                 },
             }),
         }

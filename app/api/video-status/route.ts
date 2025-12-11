@@ -145,16 +145,28 @@ export async function GET(request: NextRequest) {
 
         if (prediction.status === 'succeeded' && prediction.output) {
             // Video is ready - store it and send email
+            console.log(`Video generation succeeded for order ${order.id}, output URL: ${prediction.output}`);
             try {
+                console.log(`Starting to store video from Replicate output: ${prediction.output}`);
                 const finalVideoUrl = await storeVideo(prediction.output, order.id);
+                console.log(`Video stored successfully at: ${finalVideoUrl}`);
 
-                // Send email if we have customer email
-                if (order.customer_email) {
-                    await sendVideoEmail(
-                        order.customer_email,
-                        finalVideoUrl,
-                        order.child_name
-                    );
+                // Send email if we have customer email (use customer_email or fallback to email)
+                const recipientEmail = order.customer_email || order.email;
+                if (recipientEmail) {
+                    try {
+                        await sendVideoEmail(
+                            recipientEmail,
+                            finalVideoUrl,
+                            order.child_name
+                        );
+                        console.log(`Video email sent to ${recipientEmail}`);
+                    } catch (emailError) {
+                        console.error('Failed to send video email:', emailError);
+                        // Don't fail the whole request if email fails
+                    }
+                } else {
+                    console.warn('No email address found for order:', order.id);
                 }
 
                 // Update order with final video URL
@@ -173,9 +185,16 @@ export async function GET(request: NextRequest) {
                 });
             } catch (storeError) {
                 console.error('Failed to store video:', storeError);
+                console.error('Store error details:', {
+                    error: storeError instanceof Error ? storeError.message : String(storeError),
+                    stack: storeError instanceof Error ? storeError.stack : undefined,
+                    output: prediction.output,
+                    orderId: order.id,
+                });
                 return NextResponse.json({
                     status: 'processing',
                     message: 'Video ready, finalizing storage...',
+                    error: storeError instanceof Error ? storeError.message : 'Unknown error',
                 });
             }
         }
