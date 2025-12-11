@@ -7,6 +7,14 @@ import tempfile
 import time
 from pathlib import Path
 
+# Try to import runpod SDK, fallback to stdin/stdout if not available
+try:
+    import runpod
+    USE_RUNPOD_SDK = True
+except ImportError:
+    USE_RUNPOD_SDK = False
+    print("Warning: runpod SDK not available, using stdin/stdout mode")
+
 def download_from_r2(key, local_path, r2_config):
     """Download file from R2"""
     s3 = boto3.client(
@@ -203,23 +211,57 @@ def handler(event):
         }
 
 # RunPod handler entry point
-if __name__ == '__main__':
+def runpod_handler(job):
+    """RunPod SDK handler function - this is called by RunPod Serverless"""
     try:
-        # Read input from stdin (RunPod passes JSON via stdin)
-        input_json = sys.stdin.read()
-        event = json.loads(input_json)
+        # RunPod SDK passes job data directly
+        # job structure: {'id': '...', 'input': {...}}
+        job_input = job.get('input', {})
         
-        # Process the event
+        # Process using our handler function
+        # The handler expects event format: {'input': {...}}
+        event = {'input': job_input}
         result = handler(event)
         
-        # Output result to stdout (RunPod reads from stdout)
-        print(json.dumps(result))
-        sys.exit(0)
+        # RunPod SDK expects the result to be returned directly
+        # If result has 'output', return that, otherwise return the whole result
+        if isinstance(result, dict) and 'output' in result:
+            return result['output']
+        return result
     except Exception as e:
-        error_result = {
-            'status': 'FAILED',
-            'error': f"Fatal error: {str(e)}"
+        error_msg = f"Handler error: {str(e)}"
+        print(f"ERROR: {error_msg}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'error': error_msg
         }
-        print(json.dumps(error_result))
-        sys.exit(1)
+
+if __name__ == '__main__':
+    if USE_RUNPOD_SDK:
+        # Use RunPod SDK (recommended for Serverless)
+        print("Starting RunPod serverless worker with SDK...")
+        runpod.serverless.start({"handler": runpod_handler})
+    else:
+        # Fallback: stdin/stdout mode (for testing or non-SDK environments)
+        try:
+            # Read input from stdin (RunPod passes JSON via stdin)
+            input_json = sys.stdin.read()
+            event = json.loads(input_json)
+            
+            # Process the event
+            result = handler(event)
+            
+            # Output result to stdout (RunPod reads from stdout)
+            print(json.dumps(result))
+            sys.exit(0)
+        except Exception as e:
+            error_result = {
+                'status': 'FAILED',
+                'error': f"Fatal error: {str(e)}"
+            }
+            print(json.dumps(error_result))
+            import traceback
+            traceback.print_exc()
+            sys.exit(1)
 
