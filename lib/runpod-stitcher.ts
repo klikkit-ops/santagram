@@ -59,9 +59,10 @@ export async function stitchVideoChunks(
         };
 
         // Submit job to RunPod
+        // Try api.runpod.ai first (some accounts use this domain)
         const endpointUrl = RUNPOD_ENDPOINT_ID
-            ? `https://api.runpod.io/v2/${RUNPOD_ENDPOINT_ID}/run`
-            : 'https://api.runpod.io/v2/run';
+            ? `https://api.runpod.ai/v2/${RUNPOD_ENDPOINT_ID}/run`
+            : 'https://api.runpod.ai/v2/run';
 
         const response = await fetch(endpointUrl, {
             method: 'POST',
@@ -91,8 +92,8 @@ export async function stitchVideoChunks(
 
             const statusResponse = await fetch(
                 RUNPOD_ENDPOINT_ID
-                    ? `https://api.runpod.io/v2/${RUNPOD_ENDPOINT_ID}/status/${jobId}`
-                    : `https://api.runpod.io/v2/status/${jobId}`,
+                    ? `https://api.runpod.ai/v2/${RUNPOD_ENDPOINT_ID}/status/${jobId}`
+                    : `https://api.runpod.ai/v2/status/${jobId}`,
                 {
                     headers: {
                         'Authorization': `Bearer ${RUNPOD_API_KEY}`,
@@ -196,13 +197,14 @@ export async function splitAudioWithRunPod(
         };
 
         // Submit job to RunPod
-        // For RunPod Serverless, the API format is: https://api.runpod.io/v2/{endpoint_id}/run
-        const endpointUrl = `https://api.runpod.io/v2/${RUNPOD_ENDPOINT_ID}/run`;
+        // For RunPod Serverless, try both api.runpod.io and api.runpod.ai
+        // Some accounts/regions use different domains
+        const endpointUrl = `https://api.runpod.ai/v2/${RUNPOD_ENDPOINT_ID}/run`;
         console.log(`[splitAudioWithRunPod] Submitting job to RunPod endpoint: ${endpointUrl}`);
         
         // First, try to get endpoint status to verify it exists and is accessible
         try {
-            const statusUrl = `https://api.runpod.io/v2/${RUNPOD_ENDPOINT_ID}/status`;
+            const statusUrl = `https://api.runpod.ai/v2/${RUNPOD_ENDPOINT_ID}/status`;
             const statusResponse = await fetch(statusUrl, {
                 method: 'GET',
                 headers: {
