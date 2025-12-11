@@ -4,7 +4,8 @@ const replicate = new Replicate({
     auth: process.env.REPLICATE_API_TOKEN,
 });
 
-const HERO_VIDEO_URL = 'https://z9igvokaxzvbcuwi.public.blob.vercel-storage.com/hero.mp4';
+// TODO: Update HERO_VIDEO_URL to use R2 once hero.mp4 is migrated
+const HERO_VIDEO_URL = process.env.HERO_VIDEO_URL || 'https://z9igvokaxzvbcuwi.public.blob.vercel-storage.com/hero.mp4';
 
 export async function createLipsyncVideo(audioUrl: string): Promise<string> {
     // Run the Kling lip-sync model
@@ -124,4 +125,131 @@ export async function getLipsyncPredictionStatus(predictionId: string): Promise<
         output,
         error: prediction.error as string | undefined,
     };
+}
+
+/**
+ * Create lipsync video predictions for multiple audio chunks in parallel
+ * @param audioChunks - Array of audio chunk URLs
+ * @returns Array of prediction IDs
+ */
+export async function createLipsyncVideoChunks(audioChunks: string[]): Promise<string[]> {
+    console.log(`Creating ${audioChunks.length} parallel video predictions...`);
+
+    // Verify all audio URLs are accessible
+    for (const audioUrl of audioChunks) {
+        try {
+            const headResponse = await fetch(audioUrl, { method: 'HEAD' });
+            if (!headResponse.ok) {
+                throw new Error(`Audio URL not accessible: ${audioUrl} - ${headResponse.status}`);
+            }
+        } catch (error) {
+            console.error('Error verifying audio URL:', audioUrl, error);
+            throw new Error(`Audio URL verification failed: ${audioUrl}`);
+        }
+    }
+
+    // Create all predictions in parallel
+    const predictionPromises = audioChunks.map((audioUrl, index) => {
+        console.log(`Creating prediction ${index + 1}/${audioChunks.length} for audio: ${audioUrl}`);
+        
+        const input: {
+            video_url: string;
+            audio_file: string;
+        } = {
+            video_url: HERO_VIDEO_URL,
+            audio_file: audioUrl,
+        };
+
+        return replicate.predictions.create({
+            model: 'kwaivgi/kling-lip-sync',
+            input,
+        });
+    });
+
+    try {
+        const predictions = await Promise.all(predictionPromises);
+        const predictionIds = predictions.map(p => p.id);
+        console.log(`Created ${predictionIds.length} predictions:`, predictionIds);
+        return predictionIds;
+    } catch (error) {
+        console.error('Error creating parallel predictions:', error);
+        throw new Error(`Failed to create video predictions: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+/**
+ * Get status of multiple lipsync predictions
+ * @param predictionIds - Array of prediction IDs
+ * @returns Array of prediction statuses
+ */
+export async function getLipsyncPredictionStatuses(
+    predictionIds: string[]
+): Promise<Array<{
+    id: string;
+    status: 'starting' | 'processing' | 'succeeded' | 'failed' | 'canceled';
+    output?: string;
+    error?: string;
+}>> {
+    const statusPromises = predictionIds.map(async (id) => {
+        const status = await getLipsyncPredictionStatus(id);
+        return {
+            id,
+            ...status,
+        };
+    });
+
+    return Promise.all(statusPromises);
+}
+
+/**
+ * Wait for all predictions to complete
+ * @param predictionIds - Array of prediction IDs
+ * @param pollInterval - Polling interval in milliseconds (default: 5000)
+ * @param maxWaitTime - Maximum wait time in milliseconds (default: 600000 = 10 minutes)
+ * @returns Array of completed prediction outputs
+ */
+export async function waitForAllPredictions(
+    predictionIds: string[],
+    pollInterval: number = 5000,
+    maxWaitTime: number = 600000
+): Promise<string[]> {
+    const startTime = Date.now();
+    const completed: Map<string, string> = new Map();
+
+    console.log(`Waiting for ${predictionIds.length} predictions to complete...`);
+
+    while (completed.size < predictionIds.length) {
+        if (Date.now() - startTime > maxWaitTime) {
+            const remaining = predictionIds.filter(id => !completed.has(id));
+            throw new Error(`Timeout waiting for predictions: ${remaining.join(', ')}`);
+        }
+
+        const statuses = await getLipsyncPredictionStatuses(predictionIds);
+
+        for (const status of statuses) {
+            if (status.status === 'succeeded' && status.output && !completed.has(status.id)) {
+                completed.set(status.id, status.output);
+                console.log(`Prediction ${status.id} completed: ${status.output}`);
+            } else if (status.status === 'failed') {
+                throw new Error(`Prediction ${status.id} failed: ${status.error || 'Unknown error'}`);
+            } else if (status.status === 'canceled') {
+                throw new Error(`Prediction ${status.id} was canceled`);
+            }
+        }
+
+        if (completed.size < predictionIds.length) {
+            const remaining = predictionIds.length - completed.size;
+            console.log(`${remaining} prediction(s) still processing...`);
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+        }
+    }
+
+    // Return outputs in the same order as input prediction IDs
+    return predictionIds.map(id => {
+        const output = completed.get(id);
+        if (!output) {
+            throw new Error(`No output for prediction ${id}`);
+        }
+        return output;
+    });
 }

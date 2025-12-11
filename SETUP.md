@@ -24,6 +24,23 @@ HEYGEN_API_KEY=your-heygen-api-key
 # Resend
 RESEND_API_KEY=your-resend-api-key
 EMAIL_FROM=Santa <santa@santagram.app>
+
+# Cloudflare R2 (Storage)
+CLOUDFLARE_R2_ACCOUNT_ID=your-r2-account-id
+CLOUDFLARE_R2_ACCESS_KEY_ID=your-r2-access-key-id
+CLOUDFLARE_R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
+CLOUDFLARE_R2_BUCKET_NAME=your-bucket-name
+CLOUDFLARE_R2_PUBLIC_URL=https://your-public-r2-domain.com
+
+# RunPod (Video Processing)
+RUNPOD_API_KEY=your-runpod-api-key
+RUNPOD_ENDPOINT_ID=your-runpod-endpoint-id
+
+# Replicate (Video Generation)
+REPLICATE_API_TOKEN=your-replicate-api-token
+
+# ElevenLabs (Audio Generation)
+ELEVENLABS_API_KEY=your-elevenlabs-api-key
 ```
 
 ## Supabase Table Schema
@@ -64,7 +81,9 @@ CREATE POLICY "Allow all for service role" ON orders FOR ALL USING (true);
 ALTER TABLE orders 
   ADD COLUMN IF NOT EXISTS customer_email TEXT,
   ADD COLUMN IF NOT EXISTS replicate_prediction_id TEXT,
-  ADD COLUMN IF NOT EXISTS audio_url TEXT;
+  ADD COLUMN IF NOT EXISTS audio_url TEXT,
+  ADD COLUMN IF NOT EXISTS video_chunks JSONB,
+  ADD COLUMN IF NOT EXISTS stitching_status TEXT;
 ```
 
 ## Stripe Webhook
@@ -88,3 +107,32 @@ If you want to forward incoming emails received by Resend to `jake005588@gmail.c
 3. Select the event: `email.received` (if available)
 
 The webhook endpoint is already set up at `/api/resend-webhook` and will automatically forward any incoming emails to `jake005588@gmail.com`.
+
+## Cloudflare R2 Storage Migration
+
+**All storage operations now use Cloudflare R2 instead of Vercel Blob.**
+
+### R2 Setup:
+1. Create a Cloudflare R2 bucket
+2. Generate API tokens with read/write permissions
+3. Set up a custom domain (optional) for public access
+4. Add all R2 environment variables to your `.env.local`
+
+### Migration Notes:
+- All audio files are stored in R2 at `audio/` prefix
+- All video files are stored in R2 at `videos/` prefix
+- The `@vercel/blob` package has been removed
+- R2 is the single source of truth for all storage operations
+
+## Video Trunking (Long Videos > 30 seconds)
+
+For videos longer than 30 seconds:
+1. Audio is automatically split into ~30-second chunks
+2. Video chunks are generated in parallel using Replicate
+3. Chunks are stitched together using RunPod (cost-effective ffmpeg processing)
+4. Final video is stored in R2
+
+### Database Schema Updates:
+The `orders` table includes:
+- `video_chunks` (JSONB): Array of prediction IDs for chunked generation
+- `stitching_status` (TEXT): Status of video stitching (pending, processing, completed, failed)

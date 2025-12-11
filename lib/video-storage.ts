@@ -1,4 +1,4 @@
-import { put } from '@vercel/blob';
+import { uploadToR2 } from './r2-storage';
 import { Resend } from 'resend';
 
 const EMAIL_FROM = process.env.EMAIL_FROM || 'Santa <santa@santagram.app>';
@@ -45,21 +45,18 @@ export async function storeVideo(videoUrl: string, orderId: string): Promise<str
     }
     console.log(`[storeVideo] Video downloaded successfully, size: ${videoBuffer.byteLength} bytes`);
 
-    // Upload to Vercel Blob for permanent storage
-    const blobName = `videos/${orderId}-santa-message.mp4`;
-    console.log(`[storeVideo] Uploading video to Vercel Blob: ${blobName}`);
+    // Upload to Cloudflare R2 for permanent storage
+    const videoKey = `videos/${orderId}-santa-message.mp4`;
+    console.log(`[storeVideo] Uploading video to R2: ${videoKey}`);
     
     try {
-        const blob = await put(blobName, Buffer.from(videoBuffer), {
-            access: 'public',
-            contentType: 'video/mp4',
-        });
+        const videoUrl = await uploadToR2(videoKey, Buffer.from(videoBuffer), 'video/mp4');
 
-        console.log(`[storeVideo] Video stored successfully at: ${blob.url}`);
-        return blob.url;
-    } catch (blobError) {
-        console.error(`[storeVideo] Error uploading to Vercel Blob:`, blobError);
-        throw new Error(`Failed to upload video to Vercel Blob: ${blobError instanceof Error ? blobError.message : String(blobError)}`);
+        console.log(`[storeVideo] Video stored successfully at: ${videoUrl}`);
+        return videoUrl;
+    } catch (r2Error) {
+        console.error(`[storeVideo] Error uploading to R2:`, r2Error);
+        throw new Error(`Failed to upload video to R2: ${r2Error instanceof Error ? r2Error.message : String(r2Error)}`);
     }
 }
 

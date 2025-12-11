@@ -1,4 +1,4 @@
-import { put } from '@vercel/blob';
+import { uploadToR2 } from './r2-storage';
 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || '';
 const ELEVENLABS_VOICE_ID = 'MDLAMJ0jxkpYkjXbmG4t';
@@ -37,13 +37,11 @@ export async function generateSpeech(script: string): Promise<string> {
     // Get audio as buffer
     const audioBuffer = await response.arrayBuffer();
 
-    // Upload to Vercel Blob for Replicate to access
-    const blob = await put(`audio/${Date.now()}-santa-speech.mp3`, Buffer.from(audioBuffer), {
-        access: 'public',
-        contentType: 'audio/mpeg',
-    });
+    // Upload to Cloudflare R2 for Replicate to access
+    const audioKey = `audio/${Date.now()}-santa-speech.mp3`;
+    const audioUrl = await uploadToR2(audioKey, Buffer.from(audioBuffer), 'audio/mpeg');
 
-    console.log('Audio uploaded to:', blob.url);
+    console.log('Audio uploaded to R2:', audioUrl);
 
     // Verify the audio URL is accessible (with retry)
     let accessible = false;
@@ -57,7 +55,7 @@ export async function generateSpeech(script: string): Promise<string> {
                 await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
             }
             
-            const headResponse = await fetch(blob.url, { method: 'HEAD' });
+            const headResponse = await fetch(audioUrl, { method: 'HEAD' });
             if (headResponse.ok) {
                 accessible = true;
                 console.log(`Audio URL verified after ${attempts + 1} attempt(s)`);
@@ -71,8 +69,8 @@ export async function generateSpeech(script: string): Promise<string> {
     }
 
     if (!accessible) {
-        throw new Error(`Audio URL is not accessible after ${maxAttempts} attempts: ${blob.url}`);
+        throw new Error(`Audio URL is not accessible after ${maxAttempts} attempts: ${audioUrl}`);
     }
 
-    return blob.url;
+    return audioUrl;
 }

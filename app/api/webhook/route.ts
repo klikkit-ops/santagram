@@ -3,8 +3,11 @@ import { stripe } from '@/lib/stripe';
 import { supabase } from '@/lib/supabase';
 import { generateSantaScript } from '@/lib/script-generator';
 import { generateSpeech } from '@/lib/elevenlabs';
-import { createLipsyncVideoPrediction } from '@/lib/replicate';
+import { getAudioDuration } from '@/lib/audio-utils';
+import { createLipsyncVideoPrediction, createLipsyncVideoChunks } from '@/lib/replicate';
 import Stripe from 'stripe';
+
+const MAX_CHUNK_DURATION = 30; // seconds
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
 
@@ -57,22 +60,48 @@ export async function POST(request: NextRequest) {
                 console.log('Generating speech with ElevenLabs...');
                 const audioUrl = await generateSpeech(script);
 
-                // Step 2: Start lipsync video generation with Replicate (async)
-                console.log('Starting Pixverse lipsync generation...');
-                const predictionId = await createLipsyncVideoPrediction(audioUrl, script);
+                // Step 2: Check audio duration to determine if chunking is needed
+                const audioDuration = await getAudioDuration(audioUrl);
+                console.log(`Audio duration: ${audioDuration} seconds`);
 
-                // Update order with prediction ID and status
-                await supabase
-                    .from('orders')
-                    .update({
-                        status: 'generating',
-                        replicate_prediction_id: predictionId,
-                        audio_url: audioUrl,
-                        customer_email: session.customer_details?.email,
-                    })
-                    .eq('stripe_session_id', session.id);
+                if (audioDuration <= MAX_CHUNK_DURATION) {
+                    // Short audio - use single video generation
+                    console.log('Audio is short, using single video generation');
+                    const predictionId = await createLipsyncVideoPrediction(audioUrl, script);
 
-                console.log('Video generation started, prediction ID:', predictionId);
+                    await supabase
+                        .from('orders')
+                        .update({
+                            status: 'generating',
+                            replicate_prediction_id: predictionId,
+                            audio_url: audioUrl,
+                            customer_email: session.customer_details?.email,
+                        })
+                        .eq('stripe_session_id', session.id);
+
+                    console.log('Video generation started, prediction ID:', predictionId);
+                } else {
+                    // Long audio - use chunked generation
+                    console.log(`Audio is long (${audioDuration}s), using chunked generation`);
+                    // Import splitAudioIntoChunks dynamically to avoid circular dependencies
+                    const { splitAudioIntoChunks } = await import('@/lib/audio-utils');
+                    const audioChunks = await splitAudioIntoChunks(audioUrl, MAX_CHUNK_DURATION);
+                    
+                    const predictionIds = await createLipsyncVideoChunks(audioChunks);
+
+                    await supabase
+                        .from('orders')
+                        .update({
+                            status: 'generating',
+                            video_chunks: predictionIds,
+                            audio_url: audioUrl,
+                            customer_email: session.customer_details?.email,
+                            stitching_status: 'pending',
+                        })
+                        .eq('stripe_session_id', session.id);
+
+                    console.log(`Chunked video generation started, ${predictionIds.length} predictions:`, predictionIds);
+                }
 
             } catch (videoError) {
                 console.error('Video creation failed:', videoError);

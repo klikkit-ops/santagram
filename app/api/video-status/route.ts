@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { getLipsyncPredictionStatus } from '@/lib/replicate';
+import { getLipsyncPredictionStatus, getLipsyncPredictionStatuses, waitForAllPredictions } from '@/lib/replicate';
 import { storeVideo, sendVideoEmail } from '@/lib/video-storage';
 import { stripe } from '@/lib/stripe';
 import { generateSantaScript } from '@/lib/script-generator';
 import { generateSpeech } from '@/lib/elevenlabs';
-import { createLipsyncVideoPrediction } from '@/lib/replicate';
+import { createLipsyncVideoPrediction, createLipsyncVideoChunks } from '@/lib/replicate';
+import { getAudioDuration } from '@/lib/audio-utils';
+import { splitAudioIntoChunks } from '@/lib/audio-utils';
+import { stitchVideoChunks } from '@/lib/runpod-stitcher';
+
+const MAX_CHUNK_DURATION = 30; // seconds
 
 export async function GET(request: NextRequest) {
     try {
@@ -102,18 +107,36 @@ export async function GET(request: NextRequest) {
                         // Generate audio
                         const audioUrl = await generateSpeech(script);
 
-                        // Start video generation
-                        const predictionId = await createLipsyncVideoPrediction(audioUrl, script);
+                        // Check audio duration
+                        const audioDuration = await getAudioDuration(audioUrl);
 
-                        // Update order
-                        await supabase
-                            .from('orders')
-                            .update({
-                                status: 'generating',
-                                replicate_prediction_id: predictionId,
-                                audio_url: audioUrl,
-                            })
-                            .eq('id', order.id);
+                        if (audioDuration <= MAX_CHUNK_DURATION) {
+                            // Short audio - single video
+                            const predictionId = await createLipsyncVideoPrediction(audioUrl, script);
+
+                            await supabase
+                                .from('orders')
+                                .update({
+                                    status: 'generating',
+                                    replicate_prediction_id: predictionId,
+                                    audio_url: audioUrl,
+                                })
+                                .eq('id', order.id);
+                        } else {
+                            // Long audio - chunked generation
+                            const audioChunks = await splitAudioIntoChunks(audioUrl, MAX_CHUNK_DURATION);
+                            const predictionIds = await createLipsyncVideoChunks(audioChunks);
+
+                            await supabase
+                                .from('orders')
+                                .update({
+                                    status: 'generating',
+                                    video_chunks: predictionIds,
+                                    audio_url: audioUrl,
+                                    stitching_status: 'pending',
+                                })
+                                .eq('id', order.id);
+                        }
 
                         return NextResponse.json({
                             status: 'generating',
@@ -140,7 +163,122 @@ export async function GET(request: NextRequest) {
             });
         }
 
-        // Check Replicate prediction status
+        // Check if this is chunked generation or single video
+        const isChunked = order.video_chunks && Array.isArray(order.video_chunks) && order.video_chunks.length > 0;
+
+        if (isChunked) {
+            // Handle chunked video generation
+            const predictionIds = order.video_chunks as string[];
+            const statuses = await getLipsyncPredictionStatuses(predictionIds);
+
+            // Check if any failed
+            const failed = statuses.find(s => s.status === 'failed');
+            if (failed) {
+                await supabase
+                    .from('orders')
+                    .update({ status: 'failed' })
+                    .eq('id', order.id);
+                return NextResponse.json({
+                    status: 'failed',
+                    error: failed.error || 'Video generation failed',
+                });
+            }
+
+            // Check if all succeeded
+            const allSucceeded = statuses.every(s => s.status === 'succeeded' && s.output);
+            if (allSucceeded) {
+                const videoChunkUrls = statuses.map(s => s.output!).filter(Boolean);
+
+                // Check stitching status
+                if (order.stitching_status === 'completed' && order.video_url) {
+                    // Already stitched and stored
+                    return NextResponse.json({
+                        status: 'completed',
+                        video_url: order.video_url,
+                        child_name: order.child_name,
+                    });
+                }
+
+                // Start stitching if not already started
+                if (order.stitching_status !== 'processing' && order.stitching_status !== 'completed') {
+                    try {
+                        await supabase
+                            .from('orders')
+                            .update({ stitching_status: 'processing' })
+                            .eq('id', order.id);
+
+                        // Stitch videos together
+                        const outputKey = `videos/${order.id}-santa-message.mp4`;
+                        const finalVideoUrl = await stitchVideoChunks(videoChunkUrls, order.audio_url, outputKey);
+
+                        // Store video URL and send email
+                        const recipientEmail = order.customer_email || order.email;
+                        if (recipientEmail) {
+                            try {
+                                await sendVideoEmail(
+                                    recipientEmail,
+                                    finalVideoUrl,
+                                    order.child_name,
+                                    order.id
+                                );
+                                console.log(`Video email sent to ${recipientEmail}`);
+                            } catch (emailError) {
+                                console.error('Failed to send video email:', emailError);
+                            }
+                        }
+
+                        await supabase
+                            .from('orders')
+                            .update({
+                                status: 'completed',
+                                video_url: finalVideoUrl,
+                                stitching_status: 'completed',
+                            })
+                            .eq('id', order.id);
+
+                        return NextResponse.json({
+                            status: 'completed',
+                            video_url: finalVideoUrl,
+                            child_name: order.child_name,
+                        });
+                    } catch (stitchError) {
+                        console.error('Stitching failed:', stitchError);
+                        await supabase
+                            .from('orders')
+                            .update({ stitching_status: 'failed', status: 'failed' })
+                            .eq('id', order.id);
+                        return NextResponse.json({
+                            status: 'failed',
+                            error: 'Video stitching failed',
+                        });
+                    }
+                } else if (order.stitching_status === 'processing') {
+                    // Stitching in progress
+                    return NextResponse.json({
+                        status: 'processing',
+                        message: 'Stitching video chunks together...',
+                        child_name: order.child_name,
+                    });
+                }
+            }
+
+            // Still processing chunks
+            const processingCount = statuses.filter(s => s.status === 'processing' || s.status === 'starting').length;
+            return NextResponse.json({
+                status: 'processing',
+                message: `Processing ${processingCount} of ${predictionIds.length} video chunks...`,
+                child_name: order.child_name,
+            });
+        }
+
+        // Single video generation (existing flow)
+        if (!order.replicate_prediction_id) {
+            return NextResponse.json({
+                status: order.status || 'pending',
+                child_name: order.child_name,
+            });
+        }
+
         const prediction = await getLipsyncPredictionStatus(order.replicate_prediction_id);
 
         if (prediction.status === 'succeeded' && prediction.output) {
