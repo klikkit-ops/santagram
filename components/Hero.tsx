@@ -147,7 +147,7 @@ export default function Hero() {
                     </div>
 
                     {/* Right Column - Video Preview */}
-                    <div className="relative max-w-2xl lg:max-w-none mx-auto lg:mx-0">
+                    <div className="relative max-w-2xl lg:max-w-none mx-auto lg:mx-0 pb-20 sm:pb-24 lg:pb-0">
                         <div className="glass-card glow-gold" style={{ padding: '0.6rem' }}>
                             <div
                                 ref={containerRef}
@@ -186,7 +186,7 @@ export default function Hero() {
                             </div>
                         </div>
                         {/* Santa Image */}
-                        <div className="absolute -bottom-10 -right-10 w-32 h-32 sm:w-40 sm:h-40 animate-float z-50" style={{ left: '-16px' }}>
+                        <div className="absolute bottom-0 sm:-bottom-10 -right-10 w-32 h-32 sm:w-40 sm:h-40 animate-float z-50" style={{ left: '-16px' }}>
                             <Image src="/santa.png" alt="Santa Claus" fill className="object-contain drop-shadow-2xl" />
                         </div>
                         
