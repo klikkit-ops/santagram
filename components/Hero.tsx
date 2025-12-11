@@ -102,11 +102,11 @@ export default function Hero() {
                 </div>
 
                 {/* Two Column Layout */}
-                <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 items-center">
+                <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
                     {/* Left Column - Text and CTAs */}
                     <div className="text-center lg:text-left">
                         {/* Main Heading */}
-                        <h1 className="heading-display text-4xl sm:text-5xl md:text-6xl lg:text-6xl mb-6 leading-tight">
+                        <h1 className="heading-display text-4xl sm:text-5xl md:text-6xl lg:text-6xl mb-6 leading-tight text-center lg:text-center">
                             Create a Magical<br />
                             <span className="text-white">Video Message</span><br className="hidden lg:block" />
                             <span className="text-white">from Santa!</span> 🎄
@@ -146,8 +146,8 @@ export default function Hero() {
                     </div>
 
                     {/* Right Column - Video Preview */}
-                    <div className="relative w-full mx-auto lg:mx-0">
-                        <div className="glass-card glow-gold" style={{ padding: '0.25rem' }}>
+                    <div className="relative max-w-2xl lg:max-w-none mx-auto lg:mx-0">
+                        <div className="glass-card glow-gold" style={{ padding: '0.6rem' }}>
                             <div
                                 ref={containerRef}
                                 className="relative aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-red-900/50 to-green-900/50"
