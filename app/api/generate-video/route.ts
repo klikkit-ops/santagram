@@ -6,7 +6,7 @@ import { getAudioDuration } from '@/lib/audio-utils';
 import { splitAudioIntoChunks } from '@/lib/audio-utils';
 import { createLipsyncVideoPrediction, createLipsyncVideoChunks } from '@/lib/replicate';
 
-const MAX_CHUNK_DURATION = 30; // seconds
+const MAX_CHUNK_DURATION = 10; // seconds - Replicate kling-lip-sync model limit is 2-10 seconds
 
 export async function POST(request: NextRequest) {
     try {

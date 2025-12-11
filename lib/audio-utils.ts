@@ -54,23 +54,16 @@ export async function getAudioDuration(audioUrl: string): Promise<number> {
 }
 
 /**
- * Split an audio file into chunks
- * 
- * TEMPORARY: For audio longer than 30s, we'll use a single Replicate call with the full audio.
- * Replicate can handle longer audio files, it just takes more time.
- * 
- * TODO: Implement proper audio splitting using RunPod with ffmpeg:
- * 1. Create a RunPod function to split audio: ffmpeg -i input.mp3 -f segment -segment_time 30 -c copy chunk_%03d.mp3
- * 2. Upload each chunk to R2
- * 3. Return the chunk URLs
+ * Split an audio file into chunks using RunPod
+ * The Replicate kling-lip-sync model has a 2-10 second limit, so we must split longer audio.
  * 
  * @param audioUrl - URL of the audio file
- * @param chunkDuration - Duration of each chunk in seconds (default: 30)
+ * @param chunkDuration - Duration of each chunk in seconds (default: 10, max: 10 for Replicate)
  * @returns Array of R2 URLs for each chunk
  */
 export async function splitAudioIntoChunks(
     audioUrl: string,
-    chunkDuration: number = 30
+    chunkDuration: number = 10
 ): Promise<string[]> {
     try {
         // Get full audio duration
@@ -82,14 +75,15 @@ export async function splitAudioIntoChunks(
             return [audioUrl];
         }
 
-        // TEMPORARY WORKAROUND: For audio longer than 30s, use a single Replicate call
-        // This is slower but works reliably. Proper chunking will be implemented later.
-        console.log(`[TEMPORARY] Audio is ${fullDuration}s (longer than ${chunkDuration}s). Using single Replicate call with full audio.`);
-        console.log(`[TODO] Implement RunPod-based audio splitting for better performance.`);
+        // Audio is longer than chunk duration - need to split using RunPod
+        console.log(`Audio is ${fullDuration}s (longer than ${chunkDuration}s). Splitting using RunPod...`);
         
-        // Return the full audio URL as a single "chunk"
-        // This will be processed as a single video, which Replicate can handle
-        return [audioUrl];
+        // Import RunPod audio splitting function
+        const { splitAudioWithRunPod } = await import('./runpod-stitcher');
+        const chunkUrls = await splitAudioWithRunPod(audioUrl, chunkDuration);
+        
+        console.log(`Audio split into ${chunkUrls.length} chunks`);
+        return chunkUrls;
     } catch (error) {
         console.error('Error splitting audio into chunks:', error);
         throw new Error(`Failed to split audio: ${error instanceof Error ? error.message : String(error)}`);

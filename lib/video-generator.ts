@@ -4,7 +4,7 @@ import { createLipsyncVideoPrediction, createLipsyncVideoChunks, waitForAllPredi
 import { stitchVideoChunks } from './runpod-stitcher';
 import { uploadToR2 } from './r2-storage';
 
-const MAX_CHUNK_DURATION = 30; // seconds
+const MAX_CHUNK_DURATION = 10; // seconds - Replicate kling-lip-sync model limit is 2-10 seconds
 
 /**
  * Generate a video from audio, handling both short and long audio
@@ -35,7 +35,7 @@ export async function generateLongVideo(
             // For short videos, we'll use the existing flow
             // This function is primarily for long videos
             console.log('[generateLongVideo] Audio is short, but this function is for long videos. Use existing flow for short videos.');
-            throw new Error('Use generateSingleVideo or existing flow for videos <= 30 seconds');
+            throw new Error('Use generateSingleVideo or existing flow for videos <= 10 seconds');
         } else {
             // Long audio - use chunking
             console.log(`[generateLongVideo] Audio is long (${audioDuration}s), using chunking approach`);
@@ -70,7 +70,7 @@ export async function generateLongVideo(
 }
 
 /**
- * Generate a single video (for short audio <= 30 seconds)
+ * Generate a single video (for short audio <= 10 seconds)
  * This is a wrapper around the existing flow
  * @param audioUrl - URL of the audio file
  * @param script - The script (optional, for fallback)

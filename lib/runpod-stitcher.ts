@@ -138,23 +138,120 @@ export async function stitchVideoChunks(
 }
 
 /**
- * Alternative: Use RunPod's serverless API with a custom handler
- * This function can be used if you have a custom RunPod endpoint that handles ffmpeg
+ * Split an audio file into chunks using RunPod
+ * @param audioUrl - R2 URL of the full audio file
+ * @param chunkDuration - Duration of each chunk in seconds (default: 10)
+ * @returns Array of R2 URLs for each audio chunk
  */
-export async function stitchVideoChunksWithFFmpeg(
-    videoChunks: string[],
+export async function splitAudioWithRunPod(
     audioUrl: string,
-    outputKey: string
-): Promise<string> {
-    // This would call a RunPod endpoint that runs ffmpeg commands:
-    // 1. Download all chunks and audio from R2
-    // 2. Concatenate: ffmpeg -i "concat:chunk1.mp4|chunk2.mp4|..." -c copy temp.mp4
-    // 3. Merge with audio: ffmpeg -i temp.mp4 -i audio.mp3 -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 final.mp4
-    // 4. Upload final.mp4 to R2
-    // 5. Return R2 URL
+    chunkDuration: number = 10
+): Promise<string[]> {
+    if (!RUNPOD_API_KEY) {
+        throw new Error('RUNPOD_API_KEY is not configured');
+    }
 
-    // For now, use the generic stitchVideoChunks function
-    // The actual ffmpeg commands will be handled by the RunPod endpoint
-    return stitchVideoChunks(videoChunks, audioUrl, outputKey);
+    if (!RUNPOD_ENDPOINT_ID) {
+        throw new Error('RUNPOD_ENDPOINT_ID is not configured');
+    }
+
+    console.log(`[splitAudioWithRunPod] Starting audio splitting process`);
+
+    try {
+        // Extract R2 key from URL
+        const extractKey = (url: string): string => {
+            try {
+                const urlObj = new URL(url);
+                return urlObj.pathname.startsWith('/') ? urlObj.pathname.slice(1) : urlObj.pathname;
+            } catch {
+                return url;
+            }
+        };
+
+        const audioKey = extractKey(audioUrl);
+
+        // Prepare RunPod job input for audio splitting
+        const jobInput = {
+            input: {
+                mode: 'split_audio', // Tell handler to split audio instead of stitch video
+                audio_key: audioKey,
+                chunk_duration: chunkDuration,
+                r2_account_id: process.env.CLOUDFLARE_R2_ACCOUNT_ID,
+                r2_access_key_id: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID,
+                r2_secret_access_key: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+                r2_bucket_name: process.env.CLOUDFLARE_R2_BUCKET_NAME,
+                r2_public_url: process.env.CLOUDFLARE_R2_PUBLIC_URL,
+            },
+        };
+
+        // Submit job to RunPod
+        const endpointUrl = `https://api.runpod.io/v2/${RUNPOD_ENDPOINT_ID}/run`;
+
+        const response = await fetch(endpointUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${RUNPOD_API_KEY}`,
+            },
+            body: JSON.stringify(jobInput),
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`RunPod API error: ${response.status} ${error}`);
+        }
+
+        const result = await response.json();
+        const jobId = result.id;
+
+        console.log(`[splitAudioWithRunPod] RunPod job submitted: ${jobId}`);
+
+        // Poll for job completion
+        const maxAttempts = 60; // 5 minutes max (5 second intervals)
+        let attempts = 0;
+
+        while (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+
+            const statusResponse = await fetch(
+                `https://api.runpod.io/v2/${RUNPOD_ENDPOINT_ID}/status/${jobId}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${RUNPOD_API_KEY}`,
+                    },
+                }
+            );
+
+            if (!statusResponse.ok) {
+                throw new Error(`Failed to check RunPod job status: ${statusResponse.status}`);
+            }
+
+            const statusResult = await statusResponse.json();
+            const status = statusResult.status;
+
+            console.log(`[splitAudioWithRunPod] Job status: ${status} (attempt ${attempts + 1}/${maxAttempts})`);
+
+            if (status === 'COMPLETED') {
+                // Job completed, get the output
+                const output = statusResult.output;
+                if (output && output.chunk_urls && Array.isArray(output.chunk_urls)) {
+                    console.log(`[splitAudioWithRunPod] Audio split into ${output.chunk_urls.length} chunks`);
+                    return output.chunk_urls;
+                } else {
+                    throw new Error('RunPod job completed but no chunk_urls in output');
+                }
+            } else if (status === 'FAILED') {
+                const error = statusResult.error || 'Unknown error';
+                throw new Error(`RunPod job failed: ${error}`);
+            }
+
+            attempts++;
+        }
+
+        throw new Error('RunPod job timed out');
+    } catch (error) {
+        console.error('[splitAudioWithRunPod] Error:', error);
+        throw new Error(`Failed to split audio: ${error instanceof Error ? error.message : String(error)}`);
+    }
 }
 

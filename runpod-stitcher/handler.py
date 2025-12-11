@@ -28,14 +28,72 @@ def upload_to_r2(local_path, key, r2_config):
     s3.upload_file(local_path, r2_config['bucket_name'], key)
     print(f"Uploaded {local_path} to {key}")
 
+def split_audio_handler(input_data, r2_config):
+    """Handle audio splitting mode"""
+    audio_key = input_data['audio_key']
+    chunk_duration = input_data.get('chunk_duration', 10)
+    
+    print(f"Starting audio splitting: {audio_key} into {chunk_duration}s chunks")
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        
+        # Download audio
+        print("Downloading audio...")
+        audio_path = tmpdir_path / "audio.mp3"
+        download_from_r2(audio_key, str(audio_path), r2_config)
+        
+        # Split audio using ffmpeg
+        print(f"Splitting audio into {chunk_duration}s chunks...")
+        chunk_paths = []
+        chunk_keys = []
+        
+        # Use ffmpeg segment muxer to split audio
+        output_pattern = tmpdir_path / "chunk_%03d.mp3"
+        result = subprocess.run([
+            'ffmpeg', '-i', str(audio_path),
+            '-f', 'segment',
+            '-segment_time', str(chunk_duration),
+            '-c', 'copy',
+            '-reset_timestamps', '1',
+            '-y', str(output_pattern)
+        ], capture_output=True, text=True, check=True)
+        
+        # Find all generated chunks
+        chunk_files = sorted(tmpdir_path.glob('chunk_*.mp3'))
+        print(f"Generated {len(chunk_files)} audio chunks")
+        
+        # Upload each chunk to R2
+        base_key = f"audio/chunks/{int(audio_path.stat().st_mtime * 1000)}"
+        for i, chunk_file in enumerate(chunk_files):
+            chunk_key = f"{base_key}-chunk-{i + 1}.mp3"
+            upload_to_r2(str(chunk_file), chunk_key, r2_config)
+            chunk_keys.append(chunk_key)
+            
+            # Construct public URL
+            if r2_config['public_url']:
+                chunk_url = f"{r2_config['public_url'].rstrip('/')}/{chunk_key.lstrip('/')}"
+            else:
+                chunk_url = f"https://pub-{r2_config['account_id']}.r2.dev/{r2_config['bucket_name']}/{chunk_key.lstrip('/')}"
+            chunk_paths.append(chunk_url)
+        
+        print(f"Audio splitting completed successfully: {len(chunk_paths)} chunks")
+        
+        return {
+            'status': 'COMPLETED',
+            'output': {
+                'chunk_urls': chunk_paths,
+                'chunk_keys': chunk_keys
+            }
+        }
+
 def handler(event):
     """Main handler function"""
     try:
         input_data = event.get('input', {})
         
-        video_chunks = input_data['video_chunks']  # Array of R2 keys
-        audio_key = input_data['audio_key']
-        output_key = input_data['output_key']
+        # Check mode - default to 'stitch_video' for backward compatibility
+        mode = input_data.get('mode', 'stitch_video')
         
         # R2 configuration from input
         r2_config = {
@@ -45,6 +103,15 @@ def handler(event):
             'bucket_name': input_data['r2_bucket_name'],
             'public_url': input_data.get('r2_public_url', '')
         }
+        
+        # Handle audio splitting mode
+        if mode == 'split_audio':
+            return split_audio_handler(input_data, r2_config)
+        
+        # Default: video stitching mode
+        video_chunks = input_data['video_chunks']  # Array of R2 keys
+        audio_key = input_data['audio_key']
+        output_key = input_data['output_key']
         
         print(f"Starting video stitching: {len(video_chunks)} chunks")
         print(f"Audio key: {audio_key}")
