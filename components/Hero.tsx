@@ -40,14 +40,25 @@ export default function Hero() {
             (entries) => {
                 entries.forEach((entry) => {
                     if (entry.isIntersecting && entry.intersectionRatio >= 0.5 && !hasTriggered) {
-                        // Start muted (browsers allow muted autoplay)
-                        video.muted = true;
-                        setIsMuted(true);
+                        // Try to play with audio first (unmuted)
+                        video.muted = false;
+                        setIsMuted(false);
+                        
                         video.play().then(() => {
                             setIsPlaying(true);
+                            // If successful, keep unmuted
                         }).catch((error) => {
-                            console.log('Autoplay failed:', error);
+                            // If unmuted autoplay fails, try muted autoplay
+                            console.log('Unmuted autoplay failed, trying muted:', error);
+                            video.muted = true;
+                            setIsMuted(true);
+                            video.play().then(() => {
+                                setIsPlaying(true);
+                            }).catch((mutedError) => {
+                                console.log('Muted autoplay also failed:', mutedError);
+                            });
                         });
+                        
                         setHasTriggered(true);
                         observer.disconnect();
                     }
@@ -62,19 +73,37 @@ export default function Hero() {
         observer.observe(container);
 
         // Sync play state with video events
-        const handlePlay = () => setIsPlaying(true);
+        const handlePlay = () => {
+            setIsPlaying(true);
+            // Sync mute state with video element
+            setIsMuted(video.muted);
+        };
         const handlePause = () => setIsPlaying(false);
-        const handleEnded = () => setIsPlaying(false);
+        const handleEnded = () => {
+            setIsPlaying(false);
+            // Loop the video
+            if (video) {
+                video.currentTime = 0;
+                video.play().then(() => {
+                    setIsPlaying(true);
+                });
+            }
+        };
+        const handleVolumeChange = () => {
+            setIsMuted(video.muted);
+        };
 
         video.addEventListener('play', handlePlay);
         video.addEventListener('pause', handlePause);
         video.addEventListener('ended', handleEnded);
+        video.addEventListener('volumechange', handleVolumeChange);
 
         return () => {
             observer.disconnect();
             video.removeEventListener('play', handlePlay);
             video.removeEventListener('pause', handlePause);
             video.removeEventListener('ended', handleEnded);
+            video.removeEventListener('volumechange', handleVolumeChange);
         };
     }, [hasTriggered]);
 
@@ -125,7 +154,7 @@ export default function Hero() {
                 </div>
 
                 {/* Preview Card */}
-                <div className="relative max-w-2xl mx-auto">
+                <div className="relative max-w-xl mx-auto">
                     <div className="glass-card p-2 glow-gold">
                         <div
                             ref={containerRef}
@@ -137,14 +166,15 @@ export default function Hero() {
                                 ref={videoRef}
                                 className="w-full h-full object-cover"
                                 playsInline
-                                muted
+                                loop
+                                autoPlay
                             >
                                 <source src="https://z9igvokaxzvbcuwi.public.blob.vercel-storage.com/hero.mp4" type="video/mp4" />
                             </video>
 
                             {/* Video Controls */}
                             <div
-                                className={`absolute bottom-0 left-0 right-0 flex items-center justify-center gap-4 p-4 bg-gradient-to-t from-black/60 to-transparent transition-opacity duration-300 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}
+                                className={`absolute bottom-0 left-0 flex items-center gap-3 p-4 bg-gradient-to-t from-black/60 to-transparent transition-opacity duration-300 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}
                             >
                                 {/* Play/Pause Button */}
                                 <button
