@@ -88,7 +88,7 @@ export default function Testimonials() {
 
                 {/* Bottom Stats */}
                 <div className="mt-12 text-center">
-                    <div className="inline-flex items-center gap-6 glass-card py-4 px-8">
+                    <div className="inline-flex flex-col sm:flex-row items-center gap-4 sm:gap-6 glass-card py-4 px-6 sm:px-8">
                         <div className="flex items-center gap-2">
                             <span className="text-3xl">😊</span>
                             <div className="text-left">
@@ -96,7 +96,8 @@ export default function Testimonials() {
                                 <div className="text-white/60 text-sm">Happy Families</div>
                             </div>
                         </div>
-                        <div className="w-px h-12 bg-white/20" />
+                        <div className="hidden sm:block w-px h-12 bg-white/20" />
+                        <div className="sm:hidden w-24 h-px bg-white/20" />
                         <div className="flex items-center gap-2">
                             <span className="text-3xl">⭐</span>
                             <div className="text-left">
@@ -104,7 +105,8 @@ export default function Testimonials() {
                                 <div className="text-white/60 text-sm">Average Rating</div>
                             </div>
                         </div>
-                        <div className="w-px h-12 bg-white/20" />
+                        <div className="hidden sm:block w-px h-12 bg-white/20" />
+                        <div className="sm:hidden w-24 h-px bg-white/20" />
                         <div className="flex items-center gap-2">
                             <span className="text-3xl">🎬</span>
                             <div className="text-left">
