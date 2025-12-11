@@ -147,6 +147,33 @@ def generate_and_stitch_handler(input_data, r2_config):
             print(f"  Audio URL: {chunk_url}")
             
             try:
+                # First, get the model version (Replicate REST API requires version, not model name)
+                # We'll use the model name format that works with the REST API
+                # Format: owner/model:version or we can fetch the latest version
+                model_name = 'kwaivgi/kling-lip-sync'
+                
+                # Get the latest version of the model
+                model_response = requests.get(
+                    f'https://api.replicate.com/v1/models/{model_name}',
+                    headers={'Authorization': f'Token {replicate_api_token}'},
+                    timeout=30
+                )
+                
+                if not model_response.ok:
+                    raise ValueError(f"Failed to get model info: {model_response.status_code} - {model_response.text}")
+                
+                model_data = model_response.json()
+                latest_version = model_data.get('latest_version')
+                if not latest_version:
+                    raise ValueError("Model has no latest version")
+                
+                version_id = latest_version.get('id')
+                if not version_id:
+                    raise ValueError("Version ID not found in model data")
+                
+                print(f"  Using model version: {version_id}")
+                
+                # Now create the prediction with the version ID
                 prediction_response = requests.post(
                     'https://api.replicate.com/v1/predictions',
                     headers={
@@ -154,7 +181,7 @@ def generate_and_stitch_handler(input_data, r2_config):
                         'Content-Type': 'application/json',
                     },
                     json={
-                        'model': 'kwaivgi/kling-lip-sync',
+                        'version': version_id,
                         'input': {
                             'video_url': video_url,
                             'audio_file': chunk_url,
