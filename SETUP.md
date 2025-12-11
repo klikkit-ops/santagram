@@ -20,6 +20,10 @@ HEYGEN_API_KEY=your-heygen-api-key
 # Optional: Custom Santa avatar/voice IDs
 # HEYGEN_SANTA_AVATAR_ID=your-custom-santa-avatar-id
 # HEYGEN_SANTA_VOICE_ID=your-custom-santa-voice-id
+
+# Resend
+RESEND_API_KEY=your-resend-api-key
+EMAIL_FROM=Santa <santa@santagram.app>
 ```
 
 ## Supabase Table Schema
@@ -70,3 +74,17 @@ Set up a webhook in Stripe Dashboard pointing to:
 
 Events to listen for:
 - `checkout.session.completed`
+
+## Email Forwarding
+
+All emails sent through Resend are automatically BCC'd to `jake005588@gmail.com` (configured in `lib/video-storage.ts`).
+
+### Optional: Forward Incoming Emails (if Resend supports receiving)
+
+If you want to forward incoming emails received by Resend to `jake005588@gmail.com`:
+
+1. Go to Resend Dashboard > Settings > Webhooks
+2. Add a webhook URL: `https://your-domain.com/api/resend-webhook`
+3. Select the event: `email.received` (if available)
+
+The webhook endpoint is already set up at `/api/resend-webhook` and will automatically forward any incoming emails to `jake005588@gmail.com`.

