@@ -143,12 +143,12 @@ export async function stitchVideoChunks(
 /**
  * Split an audio file into chunks using RunPod
  * @param audioUrl - R2 URL of the full audio file
- * @param chunkDuration - Duration of each chunk in seconds (default: 10)
+ * @param chunkDuration - Duration of each chunk in seconds (default: 25)
  * @returns Array of R2 URLs for each audio chunk
  */
 export async function splitAudioWithRunPod(
     audioUrl: string,
-    chunkDuration: number = 10
+    chunkDuration: number = 25
 ): Promise<string[]> {
     console.log(`[splitAudioWithRunPod] Starting audio splitting process`);
     console.log(`[splitAudioWithRunPod] Configuration check:`, {

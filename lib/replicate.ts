@@ -133,7 +133,7 @@ export async function getLipsyncPredictionStatus(predictionId: string): Promise<
  * @returns Array of prediction IDs
  */
 export async function createLipsyncVideoChunks(audioChunks: string[]): Promise<string[]> {
-    console.log(`Creating ${audioChunks.length} parallel video predictions...`);
+    console.log(`Creating ${audioChunks.length} video predictions with rate limiting...`);
 
     // Verify all audio URLs are accessible
     for (const audioUrl of audioChunks) {
@@ -148,33 +148,70 @@ export async function createLipsyncVideoChunks(audioChunks: string[]): Promise<s
         }
     }
 
-    // Create all predictions in parallel
-    const predictionPromises = audioChunks.map((audioUrl, index) => {
-        console.log(`Creating prediction ${index + 1}/${audioChunks.length} for audio: ${audioUrl}`);
+    // Replicate rate limit: 60 requests/minute with burst of 5
+    // Create predictions in batches of 5 to respect burst limit
+    const BATCH_SIZE = 5;
+    const predictionIds: string[] = [];
+
+    for (let i = 0; i < audioChunks.length; i += BATCH_SIZE) {
+        const batch = audioChunks.slice(i, i + BATCH_SIZE);
+        const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+        const totalBatches = Math.ceil(audioChunks.length / BATCH_SIZE);
         
-        const input: {
-            video_url: string;
-            audio_file: string;
-        } = {
-            video_url: HERO_VIDEO_URL,
-            audio_file: audioUrl,
-        };
+        console.log(`Creating batch ${batchNumber}/${totalBatches} (${batch.length} predictions)...`);
 
-        return replicate.predictions.create({
-            model: 'kwaivgi/kling-lip-sync',
-            input,
+        const batchPromises = batch.map((audioUrl, batchIndex) => {
+            const globalIndex = i + batchIndex + 1;
+            console.log(`Creating prediction ${globalIndex}/${audioChunks.length} for audio: ${audioUrl}`);
+            
+            const input: {
+                video_url: string;
+                audio_file: string;
+            } = {
+                video_url: HERO_VIDEO_URL,
+                audio_file: audioUrl,
+            };
+
+            return replicate.predictions.create({
+                model: 'kwaivgi/kling-lip-sync',
+                input,
+            }).catch(async (error) => {
+                // Handle rate limiting with retry
+                if (error.status === 429) {
+                    const retryAfter = error.response?.headers?.get('retry-after') || '5';
+                    const waitTime = parseInt(retryAfter, 10) * 1000;
+                    console.log(`Rate limited, waiting ${waitTime}ms before retry...`);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    // Retry once
+                    return replicate.predictions.create({
+                        model: 'kwaivgi/kling-lip-sync',
+                        input,
+                    });
+                }
+                throw error;
+            });
         });
-    });
 
-    try {
-        const predictions = await Promise.all(predictionPromises);
-        const predictionIds = predictions.map(p => p.id);
-        console.log(`Created ${predictionIds.length} predictions:`, predictionIds);
-        return predictionIds;
-    } catch (error) {
-        console.error('Error creating parallel predictions:', error);
-        throw new Error(`Failed to create video predictions: ${error instanceof Error ? error.message : String(error)}`);
+        try {
+            const batchPredictions = await Promise.all(batchPromises);
+            const batchIds = batchPredictions.map(p => p.id);
+            predictionIds.push(...batchIds);
+            console.log(`Batch ${batchNumber} completed:`, batchIds);
+
+            // Wait a bit between batches to avoid rate limiting (except for the last batch)
+            if (i + BATCH_SIZE < audioChunks.length) {
+                const waitTime = 2000; // 2 seconds between batches
+                console.log(`Waiting ${waitTime}ms before next batch...`);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+            }
+        } catch (error) {
+            console.error(`Error creating batch ${batchNumber}:`, error);
+            throw new Error(`Failed to create video predictions in batch ${batchNumber}: ${error instanceof Error ? error.message : String(error)}`);
+        }
     }
+
+    console.log(`Created ${predictionIds.length} predictions total:`, predictionIds);
+    return predictionIds;
 }
 
 /**

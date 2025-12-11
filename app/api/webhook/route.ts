@@ -7,7 +7,7 @@ import { getAudioDuration } from '@/lib/audio-utils';
 import { createLipsyncVideoPrediction, createLipsyncVideoChunks } from '@/lib/replicate';
 import Stripe from 'stripe';
 
-const MAX_CHUNK_DURATION = 10; // seconds - Replicate kling-lip-sync model limit is 2-10 seconds
+const MAX_CHUNK_DURATION = 25; // seconds - Replicate kling-lip-sync model can handle up to ~29 seconds
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
 

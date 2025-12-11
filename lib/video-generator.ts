@@ -4,7 +4,7 @@ import { createLipsyncVideoPrediction, createLipsyncVideoChunks, waitForAllPredi
 import { stitchVideoChunks } from './runpod-stitcher';
 import { uploadToR2 } from './r2-storage';
 
-const MAX_CHUNK_DURATION = 10; // seconds - Replicate kling-lip-sync model limit is 2-10 seconds
+const MAX_CHUNK_DURATION = 25; // seconds - Replicate kling-lip-sync model can handle up to ~29 seconds
 
 /**
  * Generate a video from audio, handling both short and long audio

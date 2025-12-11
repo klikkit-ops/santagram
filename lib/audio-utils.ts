@@ -58,12 +58,12 @@ export async function getAudioDuration(audioUrl: string): Promise<number> {
  * The Replicate kling-lip-sync model has a 2-10 second limit, so we must split longer audio.
  * 
  * @param audioUrl - URL of the audio file
- * @param chunkDuration - Duration of each chunk in seconds (default: 10, max: 10 for Replicate)
+ * @param chunkDuration - Duration of each chunk in seconds (default: 25, max: ~29 for Replicate)
  * @returns Array of R2 URLs for each chunk
  */
 export async function splitAudioIntoChunks(
     audioUrl: string,
-    chunkDuration: number = 10
+    chunkDuration: number = 25
 ): Promise<string[]> {
     try {
         // Get full audio duration

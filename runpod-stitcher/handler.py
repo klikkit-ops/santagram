@@ -62,7 +62,7 @@ def upload_to_r2(local_path, key, r2_config):
 def split_audio_handler(input_data, r2_config):
     """Handle audio splitting mode"""
     audio_key = input_data['audio_key']
-    chunk_duration = input_data.get('chunk_duration', 10)
+    chunk_duration = input_data.get('chunk_duration', 25)
     
     print(f"Starting audio splitting: {audio_key} into {chunk_duration}s chunks")
     
