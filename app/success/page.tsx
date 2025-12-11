@@ -54,39 +54,54 @@ function SuccessContent() {
 
     // Track Meta Pixel Purchase event when payment is confirmed
     useEffect(() => {
-        // Only track once when payment is confirmed (status is 'paid')
-        // We track on 'paid' status, not 'completed', as that's when the purchase actually happens
-        if (videoStatus.status === 'paid' && !purchaseTracked) {
-            // Wait a bit to ensure Meta Pixel is fully loaded
+        // Track when payment is confirmed (status is 'paid' or 'completed')
+        // Meta needs to see at least one Purchase event before it shows in conversion events
+        if ((videoStatus.status === 'paid' || videoStatus.status === 'completed') && !purchaseTracked) {
             const trackPurchase = () => {
-                if (typeof window !== 'undefined' && (window as any).fbq) {
-                    const currency = videoStatus.currency || 'USD';
-                    const price = videoStatus.price || 3.99; // Default fallback
-                    
-                    // Track Purchase event with required parameters
-                    (window as any).fbq('track', 'Purchase', {
-                        value: price,
-                        currency: currency.toUpperCase(),
-                        content_name: 'Personalized Santa Video Message',
-                        content_category: 'Video Message',
-                        content_ids: ['santa-video'],
-                        num_items: 1,
-                    });
-                    
-                    console.log('[Meta Pixel] Purchase event tracked:', { 
-                        value: price, 
-                        currency: currency.toUpperCase(),
-                        event: 'Purchase'
-                    });
-                    setPurchaseTracked(true);
-                } else {
-                    // Retry after a short delay if fbq isn't ready yet
-                    setTimeout(trackPurchase, 100);
+                if (typeof window !== 'undefined') {
+                    // Check if fbq exists
+                    if ((window as any).fbq) {
+                        const currency = videoStatus.currency || 'USD';
+                        const price = videoStatus.price || 3.99; // Default fallback
+                        
+                        try {
+                            // Track Purchase event - this is the standard Meta Pixel event
+                            (window as any).fbq('track', 'Purchase', {
+                                value: price,
+                                currency: currency.toUpperCase(),
+                                content_name: 'Personalized Santa Video Message',
+                                content_category: 'Video Message',
+                                content_ids: ['santa-video'],
+                                num_items: 1,
+                            });
+                            
+                            console.log('[Meta Pixel] Purchase event tracked successfully:', { 
+                                value: price, 
+                                currency: currency.toUpperCase(),
+                                event: 'Purchase',
+                                status: videoStatus.status
+                            });
+                            setPurchaseTracked(true);
+                        } catch (error) {
+                            console.error('[Meta Pixel] Error tracking Purchase event:', error);
+                            // Retry once after a delay
+                            setTimeout(trackPurchase, 1000);
+                        }
+                    } else {
+                        // Retry if fbq isn't loaded yet (max 10 retries = 2 seconds)
+                        const retryCount = (trackPurchase as any).retryCount || 0;
+                        if (retryCount < 10) {
+                            (trackPurchase as any).retryCount = retryCount + 1;
+                            setTimeout(trackPurchase, 200);
+                        } else {
+                            console.warn('[Meta Pixel] fbq not available after retries');
+                        }
+                    }
                 }
             };
             
-            // Small delay to ensure pixel is loaded
-            setTimeout(trackPurchase, 500);
+            // Start tracking after a short delay to ensure pixel is loaded
+            setTimeout(trackPurchase, 300);
         }
     }, [videoStatus.status, videoStatus.currency, videoStatus.price, purchaseTracked]);
 
