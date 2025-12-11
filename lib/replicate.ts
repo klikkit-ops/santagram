@@ -7,32 +7,32 @@ const replicate = new Replicate({
 const HERO_VIDEO_URL = 'https://z9igvokaxzvbcuwi.public.blob.vercel-storage.com/hero.mp4';
 
 export async function createLipsyncVideo(audioUrl: string): Promise<string> {
-    // Run the Pixverse lipsync model
+    // Run the Kling lip-sync model
     const output = await replicate.run(
-        'pixverse/lipsync',
+        'kwaivgi/kling-lip-sync',
         {
             input: {
-                video: HERO_VIDEO_URL,
-                audio: audioUrl,
+                video_url: HERO_VIDEO_URL,
+                audio_url: audioUrl,
             },
         }
     );
 
     // The output should be a URL to the generated video
     if (!output || typeof output !== 'string') {
-        throw new Error('Unexpected output from Pixverse lipsync model');
+        throw new Error('Unexpected output from Kling lip-sync model');
     }
 
     return output;
 }
 
-// Alternative: async version that returns prediction ID for polling
+// Async version that returns prediction ID for polling
 export async function createLipsyncVideoPrediction(audioUrl: string): Promise<string> {
     const prediction = await replicate.predictions.create({
-        model: 'pixverse/lipsync',
+        model: 'kwaivgi/kling-lip-sync',
         input: {
-            video: HERO_VIDEO_URL,
-            audio: audioUrl,
+            video_url: HERO_VIDEO_URL,
+            audio_url: audioUrl,
         },
     });
 
@@ -65,7 +65,6 @@ export async function getLipsyncPredictionStatus(predictionId: string): Promise<
             status = 'canceled';
             break;
         default:
-            // Handle any other status (like 'aborted') as failed
             status = 'failed';
     }
 
