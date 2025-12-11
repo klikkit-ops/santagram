@@ -276,14 +276,19 @@ def generate_and_stitch_handler(input_data, r2_config):
         # Step 7: Merge with original audio
         print("Step 7: Merging with original audio...")
         final_video = tmpdir_path / "final.mp4"
+        # Use -shortest to match audio length, but re-encode video to ensure it plays
         subprocess.run([
             'ffmpeg', '-i', str(temp_video),
             '-i', str(audio_path),
-            '-c:v', 'copy',
+            '-c:v', 'libx264',
+            '-preset', 'medium',
+            '-crf', '23',
             '-c:a', 'aac',
+            '-b:a', '128k',
             '-map', '0:v:0',
             '-map', '1:a:0',
             '-shortest',  # Ensure video matches audio length
+            '-avoid_negative_ts', 'make_zero',
             '-y', str(final_video)
         ], capture_output=True, text=True, check=True)
         
