@@ -4,6 +4,7 @@ import boto3
 import os
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 def download_from_r2(key, local_path, r2_config):
@@ -64,7 +65,6 @@ def split_audio_handler(input_data, r2_config):
         print(f"Generated {len(chunk_files)} audio chunks")
         
         # Upload each chunk to R2
-        import time
         base_key = f"audio/chunks/{int(time.time() * 1000)}"
         for i, chunk_file in enumerate(chunk_files):
             chunk_key = f"{base_key}-chunk-{i + 1}.mp3"
