@@ -95,10 +95,10 @@ export default function Hero() {
 
             <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Trust Badge - Mobile Only (above content) */}
-                <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-8 border border-white/20 mx-auto block text-center lg:hidden">
-                    <span className="text-xl">🎅</span>
-                    <span className="text-white/80 text-sm">Trusted by 10,000+ happy families</span>
-                    <span className="text-xl">⭐</span>
+                <div className="flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-2 mb-6 border border-white/20 mx-auto lg:hidden w-fit">
+                    <span className="text-lg">🎅</span>
+                    <span className="text-white/80 text-xs sm:text-sm whitespace-nowrap">Trusted by 10,000+ happy families</span>
+                    <span className="text-lg">⭐</span>
                 </div>
 
                 {/* Two Column Layout */}

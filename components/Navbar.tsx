@@ -12,15 +12,15 @@ export default function Navbar() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16 sm:h-20">
                     {/* Logo */}
-                    <Link href="/" className="flex items-center gap-3">
+                    <Link href="/" className="flex items-center gap-2 sm:gap-3">
                         <Image
                             src="/logo.png"
                             alt="SantaGram"
-                            width={50}
-                            height={50}
-                            className="rounded-full"
+                            width={40}
+                            height={40}
+                            className="rounded-full sm:w-[50px] sm:h-[50px]"
                         />
-                        <span className="heading-display text-xl sm:text-2xl">
+                        <span className="heading-display text-lg sm:text-xl md:text-2xl">
                             SantaGram
                         </span>
                     </Link>
