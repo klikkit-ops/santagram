@@ -8,20 +8,7 @@ export default function Hero() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [hasTriggered, setHasTriggered] = useState(false);
-    const [isPlaying, setIsPlaying] = useState(false);
     const [isMuted, setIsMuted] = useState(true);
-    const [showControls, setShowControls] = useState(false);
-
-    const togglePlay = useCallback(() => {
-        const video = videoRef.current;
-        if (!video) return;
-
-        if (video.paused) {
-            video.play();
-        } else {
-            video.pause();
-        }
-    }, []);
 
     const toggleMute = useCallback(() => {
         const video = videoRef.current;
@@ -45,16 +32,13 @@ export default function Hero() {
                         setIsMuted(false);
                         
                         video.play().then(() => {
-                            setIsPlaying(true);
                             // If successful, keep unmuted
                         }).catch((error) => {
                             // If unmuted autoplay fails, try muted autoplay
                             console.log('Unmuted autoplay failed, trying muted:', error);
                             video.muted = true;
                             setIsMuted(true);
-                            video.play().then(() => {
-                                setIsPlaying(true);
-                            }).catch((mutedError) => {
+                            video.play().catch((mutedError) => {
                                 console.log('Muted autoplay also failed:', mutedError);
                             });
                         });
@@ -72,36 +56,23 @@ export default function Hero() {
 
         observer.observe(container);
 
-        // Sync play state with video events
-        const handlePlay = () => {
-            setIsPlaying(true);
-            // Sync mute state with video element
-            setIsMuted(video.muted);
-        };
-        const handlePause = () => setIsPlaying(false);
-        const handleEnded = () => {
-            setIsPlaying(false);
-            // Loop the video
-            if (video) {
-                video.currentTime = 0;
-                video.play().then(() => {
-                    setIsPlaying(true);
-                });
-            }
-        };
+        // Sync mute state with video events
         const handleVolumeChange = () => {
             setIsMuted(video.muted);
         };
+        const handleEnded = () => {
+            // Loop the video
+            if (video) {
+                video.currentTime = 0;
+                video.play();
+            }
+        };
 
-        video.addEventListener('play', handlePlay);
-        video.addEventListener('pause', handlePause);
         video.addEventListener('ended', handleEnded);
         video.addEventListener('volumechange', handleVolumeChange);
 
         return () => {
             observer.disconnect();
-            video.removeEventListener('play', handlePlay);
-            video.removeEventListener('pause', handlePause);
             video.removeEventListener('ended', handleEnded);
             video.removeEventListener('volumechange', handleVolumeChange);
         };
@@ -159,9 +130,6 @@ export default function Hero() {
                         <div
                             ref={containerRef}
                             className="relative aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-red-900/50 to-green-900/50"
-                            onMouseEnter={() => setShowControls(true)}
-                            onMouseLeave={() => setShowControls(false)}
-                            onTouchStart={() => setShowControls(true)}
                         >
                             <video
                                 ref={videoRef}
@@ -175,8 +143,8 @@ export default function Hero() {
                                 <source src="https://z9igvokaxzvbcuwi.public.blob.vercel-storage.com/hero.mp4" type="video/mp4" />
                             </video>
 
-                            {/* Mute/Unmute Button - Always Visible */}
-                            <div className="absolute bottom-2 sm:bottom-3 left-2 sm:left-3 z-10">
+                            {/* Mute/Unmute Button - Always Visible in Top Left */}
+                            <div className="absolute top-2 sm:top-3 left-2 sm:left-3 z-10">
                                 <button
                                     onClick={toggleMute}
                                     className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/70 backdrop-blur-sm flex items-center justify-center hover:bg-black/90 active:bg-black/90 transition-colors shadow-lg touch-manipulation"
@@ -189,28 +157,6 @@ export default function Hero() {
                                     ) : (
                                         <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
-                                        </svg>
-                                    )}
-                                </button>
-                            </div>
-
-                            {/* Play/Pause Button - Shown on Hover/Touch */}
-                            <div
-                                className={`absolute bottom-0 left-0 flex items-center p-3 sm:p-4 bg-gradient-to-t from-black/60 to-transparent transition-opacity duration-300 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}
-                                style={{ paddingLeft: '4.5rem' }}
-                            >
-                                <button
-                                    onClick={togglePlay}
-                                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 active:bg-white/30 transition-colors touch-manipulation"
-                                    aria-label={isPlaying ? 'Pause' : 'Play'}
-                                >
-                                    {isPlaying ? (
-                                        <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                                        </svg>
-                                    ) : (
-                                        <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8 5v14l11-7z" />
                                         </svg>
                                     )}
                                 </button>
