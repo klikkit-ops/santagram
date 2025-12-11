@@ -336,15 +336,15 @@ async function submitAndPollRunPodJob(jobInput: any, domain: string): Promise<an
 }
 
 /**
- * Generate and stitch video in one RunPod call (orchestrates split, Replicate calls, and stitch)
+ * Submit a RunPod job for full pipeline (split, generate, stitch) and return job ID
  * This reduces Vercel API calls from 5+ to 1
  * @param audioUrl - R2 URL of the full audio file
  * @param outputKey - R2 key for the final stitched video
  * @param videoUrl - URL of the hero video (defaults to HERO_VIDEO_URL)
  * @param chunkDuration - Duration of each chunk in seconds (default: 25)
- * @returns R2 URL of the final stitched video
+ * @returns RunPod job ID (caller should poll for completion)
  */
-export async function generateAndStitchVideo(
+export async function submitGenerateAndStitchVideo(
     audioUrl: string,
     outputKey: string,
     videoUrl?: string,
@@ -414,24 +414,106 @@ export async function generateAndStitchVideo(
 
         for (const domain of domains) {
             try {
-                const output = await submitAndPollRunPodJob(jobInput, domain);
-                if (output && output.video_url) {
-                    console.log(`[generateAndStitchVideo] Full pipeline completed: ${output.video_url}`);
-                    return output.video_url;
-                } else {
-                    throw new Error('RunPod job completed but no video_url in output.');
+                const endpointUrl = `https://${domain}/v2/${RUNPOD_ENDPOINT_ID}/run`;
+                console.log(`[submitGenerateAndStitchVideo] Submitting job to: ${endpointUrl}`);
+
+                const response = await fetch(endpointUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${RUNPOD_API_KEY}`,
+                    },
+                    body: JSON.stringify(jobInput),
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`RunPod API error: ${response.status} ${response.statusText} - ${errorText}`);
                 }
+
+                const result = await response.json();
+                const jobId = result.id;
+                console.log(`[submitGenerateAndStitchVideo] Job submitted on ${domain}: ${jobId}`);
+                return jobId;
             } catch (error) {
-                console.warn(`[generateAndStitchVideo] Pipeline failed on domain ${domain}:`, error);
+                console.warn(`[submitGenerateAndStitchVideo] Failed on domain ${domain}:`, error);
                 lastError = error instanceof Error ? error : new Error(String(error));
             }
         }
         throw new Error(`RunPod endpoint not accessible on any domain (tried: ${domains.join(', ')}). Last error: ${lastError?.message || 'Unknown'}`);
 
     } catch (error) {
-        console.error('[generateAndStitchVideo] Error:', error);
-        throw new Error(`Failed to generate and stitch video: ${error instanceof Error ? error.message : String(error)}`);
+        console.error('[submitGenerateAndStitchVideo] Error:', error);
+        throw new Error(`Failed to submit generate and stitch job: ${error instanceof Error ? error.message : String(error)}`);
     }
+}
+
+/**
+ * Poll RunPod job status and return final video URL when complete
+ * @param jobId - RunPod job ID
+ * @returns R2 URL of the final stitched video
+ */
+export async function pollRunPodJobStatus(jobId: string): Promise<{
+    status: 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
+    video_url?: string;
+    error?: string;
+}> {
+    if (!RUNPOD_API_KEY || !RUNPOD_ENDPOINT_ID) {
+        throw new Error('RunPod API key or Endpoint ID is not configured.');
+    }
+
+    const domains = ['api.runpod.ai', 'api.runpod.io'];
+    let lastError: Error | null = null;
+
+    for (const domain of domains) {
+        try {
+            const statusResponse = await fetch(
+                `https://${domain}/v2/${RUNPOD_ENDPOINT_ID}/status/${jobId}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${RUNPOD_API_KEY}`,
+                    },
+                }
+            );
+
+            if (!statusResponse.ok) {
+                if (statusResponse.status === 404) {
+                    continue; // Try next domain
+                }
+                throw new Error(`Failed to check RunPod job status: ${statusResponse.status}`);
+            }
+
+            const statusResult = await statusResponse.json();
+            const status = statusResult.status;
+
+            if (status === 'COMPLETED') {
+                const output = statusResult.output;
+                if (output && output.video_url) {
+                    return {
+                        status: 'COMPLETED',
+                        video_url: output.video_url,
+                    };
+                } else {
+                    throw new Error('RunPod job completed but no video_url in output.');
+                }
+            } else if (status === 'FAILED' || status === 'CANCELED') {
+                const error = statusResult.error || 'Unknown error';
+                return {
+                    status: 'FAILED',
+                    error: error,
+                };
+            } else {
+                return {
+                    status: 'IN_PROGRESS',
+                };
+            }
+        } catch (error) {
+            console.warn(`[pollRunPodJobStatus] Failed on domain ${domain}:`, error);
+            lastError = error instanceof Error ? error : new Error(String(error));
+        }
+    }
+
+    throw new Error(`Failed to poll RunPod job on any domain. Last error: ${lastError?.message || 'Unknown'}`);
 }
 
 /**

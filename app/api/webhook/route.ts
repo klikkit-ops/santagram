@@ -5,7 +5,7 @@ import { generateSantaScript } from '@/lib/script-generator';
 import { generateSpeech } from '@/lib/elevenlabs';
 import { getAudioDuration } from '@/lib/audio-utils';
 import { createLipsyncVideoPrediction } from '@/lib/replicate';
-import { generateAndStitchVideo } from '@/lib/runpod-stitcher';
+import { submitGenerateAndStitchVideo } from '@/lib/runpod-stitcher';
 import Stripe from 'stripe';
 
 const MAX_CHUNK_DURATION = 25; // seconds - Replicate kling-lip-sync model can handle up to ~29 seconds
@@ -86,12 +86,23 @@ export async function POST(request: NextRequest) {
                     console.log(`Audio is long (${audioDuration}s), using RunPod orchestration`);
                     
                     try {
-                        const orderId = session.metadata?.orderId || `order_${Date.now()}`;
+                        // Get order ID first
+                        const { data: existingOrder } = await supabase
+                            .from('orders')
+                            .select('id')
+                            .eq('stripe_session_id', session.id)
+                            .single();
+                        
+                        const orderId = existingOrder?.id || `order_${Date.now()}`;
                         const outputKey = `videos/${orderId}-santa-message.mp4`;
                         
                         console.log('[webhook] Starting RunPod orchestration (split + generate + stitch)...');
                         
-                        // Update order status to indicate processing
+                        // Submit RunPod job and get job ID
+                        const runpodJobId = await submitGenerateAndStitchVideo(audioUrl, outputKey, undefined, MAX_CHUNK_DURATION);
+                        console.log(`[webhook] RunPod job submitted: ${runpodJobId}`);
+                        
+                        // Update order with job ID and status
                         await supabase
                             .from('orders')
                             .update({
@@ -99,63 +110,13 @@ export async function POST(request: NextRequest) {
                                 audio_url: audioUrl,
                                 customer_email: session.customer_details?.email,
                                 stitching_status: 'processing', // RunPod handles everything
+                                // Store RunPod job ID in replicate_prediction_id field (reusing existing field)
+                                // Or we could add a new field, but this works for now
+                                replicate_prediction_id: `runpod:${runpodJobId}`,
                             })
                             .eq('stripe_session_id', session.id);
 
-                        // Start RunPod job (this will handle splitting, Replicate calls, and stitching)
-                        // Note: This is async - RunPod will process in background
-                        // We'll poll for completion via video-status endpoint
-                        generateAndStitchVideo(audioUrl, outputKey, undefined, MAX_CHUNK_DURATION)
-                            .then(async (finalVideoUrl) => {
-                                console.log(`[webhook] RunPod orchestration completed: ${finalVideoUrl}`);
-                                
-                                // Get order to send email
-                                const { data: order } = await supabase
-                                    .from('orders')
-                                    .select('*')
-                                    .eq('stripe_session_id', session.id)
-                                    .single();
-                                
-                                if (order) {
-                                    const recipientEmail = order.customer_email || order.email;
-                                    if (recipientEmail) {
-                                        try {
-                                            const { sendVideoEmail } = await import('@/lib/video-storage');
-                                            await sendVideoEmail(
-                                                recipientEmail,
-                                                finalVideoUrl,
-                                                order.child_name,
-                                                order.id
-                                            );
-                                            console.log(`[webhook] Video email sent to ${recipientEmail}`);
-                                        } catch (emailError) {
-                                            console.error('[webhook] Failed to send video email:', emailError);
-                                        }
-                                    }
-                                    
-                                    // Update order with final video
-                                    await supabase
-                                        .from('orders')
-                                        .update({
-                                            status: 'completed',
-                                            video_url: finalVideoUrl,
-                                            stitching_status: 'completed',
-                                        })
-                                        .eq('id', order.id);
-                                }
-                            })
-                            .catch(async (error) => {
-                                console.error('[webhook] RunPod orchestration failed:', error);
-                                await supabase
-                                    .from('orders')
-                                    .update({
-                                        status: 'failed',
-                                        stitching_status: 'failed',
-                                    })
-                                    .eq('stripe_session_id', session.id);
-                            });
-
-                        console.log('[webhook] RunPod orchestration started (processing in background)');
+                        console.log('[webhook] RunPod orchestration job started, will be polled via video-status endpoint');
                     } catch (orchestrationError) {
                         console.error('[webhook] Error starting RunPod orchestration:', orchestrationError);
                         throw orchestrationError;
