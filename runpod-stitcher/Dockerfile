@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-RUN pip install boto3 requests runpod
+RUN pip install boto3 botocore requests runpod
 
 # Copy handler script
 COPY handler.py /handler.py
