@@ -4,6 +4,14 @@
 
 Meta Pixel requires that **at least one Purchase event is actually fired and received** before it appears in the conversion events dropdown. The event needs to be tracked on your website first.
 
+According to [Meta's standard events documentation](https://business.facebook.com/business/help/402791146561655?id=1205376682832142), the Purchase event format is:
+
+```javascript
+fbq('track', 'Purchase', {value: 0.00, currency: 'USD'});
+```
+
+Our implementation follows this standard format with additional optional parameters for better tracking.
+
 ## Steps to Set Up Purchase Conversion Event
 
 ### Step 1: Verify Purchase Events Are Being Fired

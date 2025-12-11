@@ -65,7 +65,9 @@ function SuccessContent() {
                         const price = videoStatus.price || 3.99; // Default fallback
                         
                         try {
-                            // Track Purchase event - this is the standard Meta Pixel event
+                            // Track Purchase event - standard Meta Pixel format
+                            // Required parameters: value, currency
+                            // Optional parameters: content_name, content_category, content_ids, num_items
                             (window as any).fbq('track', 'Purchase', {
                                 value: price,
                                 currency: currency.toUpperCase(),
