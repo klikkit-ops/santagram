@@ -213,7 +213,7 @@ def generate_and_stitch_handler(input_data, r2_config):
         # Step 3: Poll for all predictions to complete
         print(f"Step 3: Polling {len(prediction_ids)} predictions for completion...")
         video_urls = []
-        max_polls = 120  # 10 minutes max (5 second intervals)
+        max_polls = 300  # 25 minutes max (5 second intervals) - Replicate can take 5-10 min per prediction
         
         for pred_id in prediction_ids:
             completed = False

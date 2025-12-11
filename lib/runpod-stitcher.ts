@@ -393,6 +393,12 @@ export async function submitGenerateAndStitchVideo(
         const audioKey = extractKey(audioUrl);
         const heroVideoUrl = videoUrl || process.env.HERO_VIDEO_URL || 'https://blob.santagram.app/hero/hero.mp4';
 
+        // Construct webhook URL for RunPod to notify us when job completes
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL 
+            ? `https://${process.env.VERCEL_URL || process.env.NEXT_PUBLIC_BASE_URL?.replace('https://', '').replace('http://', '')}`
+            : 'https://santagram.app';
+        const webhookUrl = `${baseUrl}/api/runpod-webhook`;
+
         const jobInput = {
             input: {
                 mode: 'generate_and_stitch',
@@ -407,6 +413,7 @@ export async function submitGenerateAndStitchVideo(
                 r2_bucket_name: process.env.CLOUDFLARE_R2_BUCKET_NAME,
                 r2_public_url: process.env.CLOUDFLARE_R2_PUBLIC_URL,
             },
+            webhook: webhookUrl, // RunPod will POST to this URL when job completes
         };
 
         const domains = ['api.runpod.ai', 'api.runpod.io'];

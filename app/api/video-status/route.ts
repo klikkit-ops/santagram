@@ -65,72 +65,77 @@ export async function GET(request: NextRequest) {
         // Check if this is a RunPod orchestration job (stored as "runpod:jobId" in replicate_prediction_id)
         if (order.replicate_prediction_id && order.replicate_prediction_id.startsWith('runpod:')) {
             const runpodJobId = order.replicate_prediction_id.replace('runpod:', '');
-            console.log(`[video-status] Checking RunPod orchestration job: ${runpodJobId}`);
             
-            try {
-                const jobStatus = await pollRunPodJobStatus(runpodJobId);
-                
-                if (jobStatus.status === 'COMPLETED' && jobStatus.video_url) {
-                    // Job completed - update order and send email
-                    const recipientEmail = order.customer_email || order.email;
-                    if (recipientEmail) {
-                        try {
-                            await sendVideoEmail(
-                                recipientEmail,
-                                jobStatus.video_url,
-                                order.child_name,
-                                order.id
-                            );
-                            console.log(`[video-status] Video email sent to ${recipientEmail}`);
-                        } catch (emailError) {
-                            console.error('[video-status] Failed to send video email:', emailError);
-                        }
-                    }
+            // With webhooks, we don't need to poll constantly
+            // Only check if order is still in generating status (webhook might not have fired yet)
+            // This is a lightweight check, not constant polling
+            if (order.status === 'generating' || order.stitching_status === 'processing') {
+                try {
+                    // Quick status check (only if still processing)
+                    const jobStatus = await pollRunPodJobStatus(runpodJobId);
                     
-                    await supabase
-                        .from('orders')
-                        .update({
+                    if (jobStatus.status === 'COMPLETED' && jobStatus.video_url) {
+                        // Job completed - update order and send email
+                        const recipientEmail = order.customer_email || order.email;
+                        if (recipientEmail) {
+                            try {
+                                await sendVideoEmail(
+                                    recipientEmail,
+                                    jobStatus.video_url,
+                                    order.child_name,
+                                    order.id
+                                );
+                                console.log(`[video-status] Video email sent to ${recipientEmail}`);
+                            } catch (emailError) {
+                                console.error('[video-status] Failed to send video email:', emailError);
+                            }
+                        }
+                        
+                        await supabase
+                            .from('orders')
+                            .update({
+                                status: 'completed',
+                                video_url: jobStatus.video_url,
+                                stitching_status: 'completed',
+                            })
+                            .eq('id', order.id);
+                        
+                        return NextResponse.json({
                             status: 'completed',
                             video_url: jobStatus.video_url,
-                            stitching_status: 'completed',
-                        })
-                        .eq('id', order.id);
-                    
-                    return NextResponse.json({
-                        status: 'completed',
-                        video_url: jobStatus.video_url,
-                        child_name: order.child_name,
-                    });
-                } else if (jobStatus.status === 'FAILED') {
-                    await supabase
-                        .from('orders')
-                        .update({
+                            child_name: order.child_name,
+                        });
+                    } else if (jobStatus.status === 'FAILED') {
+                        await supabase
+                            .from('orders')
+                            .update({
+                                status: 'failed',
+                                stitching_status: 'failed',
+                            })
+                            .eq('id', order.id);
+                        
+                        return NextResponse.json({
                             status: 'failed',
-                            stitching_status: 'failed',
-                        })
-                        .eq('id', order.id);
-                    
-                    return NextResponse.json({
-                        status: 'failed',
-                        error: jobStatus.error || 'RunPod job failed',
-                        child_name: order.child_name,
-                    });
-                } else {
-                    // Still processing
-                    return NextResponse.json({
-                        status: 'processing',
-                        message: 'Generating video (split, generate, stitch)...',
-                        child_name: order.child_name,
-                    });
+                            error: jobStatus.error || 'RunPod job failed',
+                            child_name: order.child_name,
+                        });
+                    }
+                } catch (error) {
+                    // If polling fails, just return processing status
+                    // Webhook will handle completion
+                    console.log('[video-status] Status check failed, relying on webhook:', error);
                 }
-            } catch (error) {
-                console.error('[video-status] Error polling RunPod job:', error);
-                return NextResponse.json({
-                    status: 'processing',
-                    message: 'Checking video generation status...',
-                    child_name: order.child_name,
-                });
             }
+            
+            // Return current status (webhook will update it when ready)
+            return NextResponse.json({
+                status: order.status === 'completed' ? 'completed' : 'processing',
+                message: order.status === 'completed' 
+                    ? 'Video generation completed' 
+                    : 'Generating video (split, generate, stitch)...',
+                child_name: order.child_name,
+                video_url: order.video_url || undefined,
+            });
         }
 
         // If no prediction ID, video hasn't started generating
