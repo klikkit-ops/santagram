@@ -72,26 +72,21 @@ export async function POST(request: NextRequest) {
 
             return NextResponse.json({ success: true, prediction_id: predictionId, type: 'single' });
         } else {
-            // Long audio - chunked generation
-            const audioChunks = await splitAudioIntoChunks(audioUrl, MAX_CHUNK_DURATION);
-            const predictionIds = await createLipsyncVideoChunks(audioChunks);
+            // Long audio - use RunPod orchestration
+            const outputKey = `videos/${orderId}-santa-message.mp4`;
+            const runpodJobId = await submitGenerateAndStitchVideo(audioUrl, outputKey, undefined, MAX_CHUNK_DURATION);
 
             await supabase
                 .from('orders')
                 .update({
                     status: 'generating',
-                    video_chunks: predictionIds,
                     audio_url: audioUrl,
-                    stitching_status: 'pending',
+                    stitching_status: 'processing',
+                    replicate_prediction_id: `runpod:${runpodJobId}`,
                 })
                 .eq('id', orderId);
 
-            return NextResponse.json({ 
-                success: true, 
-                prediction_ids: predictionIds, 
-                type: 'chunked',
-                chunk_count: predictionIds.length 
-            });
+            return NextResponse.json({ success: true, runpod_job_id: runpodJobId, type: 'orchestrated' });
         }
     } catch (error) {
         console.error('Generate video error:', error);
