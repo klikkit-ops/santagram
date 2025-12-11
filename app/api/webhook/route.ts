@@ -83,31 +83,56 @@ export async function POST(request: NextRequest) {
                 } else {
                     // Long audio - use chunked generation
                     console.log(`Audio is long (${audioDuration}s), using chunked generation`);
-                    // Import splitAudioIntoChunks dynamically to avoid circular dependencies
-                    const { splitAudioIntoChunks } = await import('@/lib/audio-utils');
-                    const audioChunks = await splitAudioIntoChunks(audioUrl, MAX_CHUNK_DURATION);
                     
-                    const predictionIds = await createLipsyncVideoChunks(audioChunks);
+                    try {
+                        // Import splitAudioIntoChunks dynamically to avoid circular dependencies
+                        const { splitAudioIntoChunks } = await import('@/lib/audio-utils');
+                        console.log('[webhook] Starting audio splitting...');
+                        const audioChunks = await splitAudioIntoChunks(audioUrl, MAX_CHUNK_DURATION);
+                        console.log(`[webhook] Audio split into ${audioChunks.length} chunks:`, audioChunks);
+                        
+                        console.log('[webhook] Creating Replicate predictions for chunks...');
+                        const predictionIds = await createLipsyncVideoChunks(audioChunks);
+                        console.log(`[webhook] Created ${predictionIds.length} Replicate predictions:`, predictionIds);
 
-                    await supabase
-                        .from('orders')
-                        .update({
-                            status: 'generating',
-                            video_chunks: predictionIds,
-                            audio_url: audioUrl,
-                            customer_email: session.customer_details?.email,
-                            stitching_status: 'pending',
-                        })
-                        .eq('stripe_session_id', session.id);
+                        await supabase
+                            .from('orders')
+                            .update({
+                                status: 'generating',
+                                video_chunks: predictionIds,
+                                audio_url: audioUrl,
+                                customer_email: session.customer_details?.email,
+                                stitching_status: 'pending',
+                            })
+                            .eq('stripe_session_id', session.id);
 
-                    console.log(`Chunked video generation started, ${predictionIds.length} predictions:`, predictionIds);
+                        console.log(`[webhook] Chunked video generation started successfully, ${predictionIds.length} predictions:`, predictionIds);
+                    } catch (chunkError) {
+                        console.error('[webhook] Error in chunked generation flow:', chunkError);
+                        console.error('[webhook] Error details:', {
+                            message: chunkError instanceof Error ? chunkError.message : String(chunkError),
+                            stack: chunkError instanceof Error ? chunkError.stack : undefined,
+                            audioUrl,
+                            audioDuration,
+                        });
+                        throw chunkError; // Re-throw to be caught by outer catch
+                    }
                 }
 
             } catch (videoError) {
-                console.error('Video creation failed:', videoError);
+                console.error('[webhook] Video creation failed:', videoError);
+                console.error('[webhook] Video error details:', {
+                    message: videoError instanceof Error ? videoError.message : String(videoError),
+                    stack: videoError instanceof Error ? videoError.stack : undefined,
+                    sessionId: session.id,
+                });
                 await supabase
                     .from('orders')
-                    .update({ status: 'failed' })
+                    .update({ 
+                        status: 'failed',
+                        // Store error message for debugging
+                        // Note: You may need to add an error_message column to your orders table
+                    })
                     .eq('stripe_session_id', session.id);
             }
         }

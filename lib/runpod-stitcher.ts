@@ -147,15 +147,26 @@ export async function splitAudioWithRunPod(
     audioUrl: string,
     chunkDuration: number = 10
 ): Promise<string[]> {
+    console.log(`[splitAudioWithRunPod] Starting audio splitting process`);
+    console.log(`[splitAudioWithRunPod] Configuration check:`, {
+        hasApiKey: !!RUNPOD_API_KEY,
+        hasEndpointId: !!RUNPOD_ENDPOINT_ID,
+        endpointId: RUNPOD_ENDPOINT_ID || 'NOT SET',
+        audioUrl,
+        chunkDuration,
+    });
+
     if (!RUNPOD_API_KEY) {
-        throw new Error('RUNPOD_API_KEY is not configured');
+        const error = 'RUNPOD_API_KEY is not configured. Please set it in your environment variables.';
+        console.error(`[splitAudioWithRunPod] ${error}`);
+        throw new Error(error);
     }
 
     if (!RUNPOD_ENDPOINT_ID) {
-        throw new Error('RUNPOD_ENDPOINT_ID is not configured');
+        const error = 'RUNPOD_ENDPOINT_ID is not configured. Please set it in your environment variables.';
+        console.error(`[splitAudioWithRunPod] ${error}`);
+        throw new Error(error);
     }
-
-    console.log(`[splitAudioWithRunPod] Starting audio splitting process`);
 
     try {
         // Extract R2 key from URL
@@ -186,6 +197,13 @@ export async function splitAudioWithRunPod(
 
         // Submit job to RunPod
         const endpointUrl = `https://api.runpod.io/v2/${RUNPOD_ENDPOINT_ID}/run`;
+        console.log(`[splitAudioWithRunPod] Submitting job to RunPod endpoint: ${endpointUrl}`);
+        console.log(`[splitAudioWithRunPod] Job input (without secrets):`, {
+            mode: jobInput.input.mode,
+            audio_key: jobInput.input.audio_key,
+            chunk_duration: jobInput.input.chunk_duration,
+            has_r2_config: !!(jobInput.input.r2_account_id && jobInput.input.r2_bucket_name),
+        });
 
         const response = await fetch(endpointUrl, {
             method: 'POST',
@@ -197,8 +215,14 @@ export async function splitAudioWithRunPod(
         });
 
         if (!response.ok) {
-            const error = await response.text();
-            throw new Error(`RunPod API error: ${response.status} ${error}`);
+            const errorText = await response.text();
+            console.error(`[splitAudioWithRunPod] RunPod API error:`, {
+                status: response.status,
+                statusText: response.statusText,
+                error: errorText,
+                endpointUrl,
+            });
+            throw new Error(`RunPod API error: ${response.status} ${response.statusText} - ${errorText}`);
         }
 
         const result = await response.json();
