@@ -2,7 +2,7 @@
 // Keeping for reference but not actively used
 // import { uploadToR2 } from './r2-storage';
 
-const HERO_VIDEO_URL = 'https://z9igvokaxzvbcuwi.public.blob.vercel-storage.com/hero.mp4';
+const HERO_VIDEO_URL = 'https://blob.santagram.app/hero/hero.mp4';
 
 /**
  * Get audio duration in seconds from an audio file URL

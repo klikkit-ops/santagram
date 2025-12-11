@@ -4,8 +4,7 @@ const replicate = new Replicate({
     auth: process.env.REPLICATE_API_TOKEN,
 });
 
-// TODO: Update HERO_VIDEO_URL to use R2 once hero.mp4 is migrated
-const HERO_VIDEO_URL = process.env.HERO_VIDEO_URL || 'https://z9igvokaxzvbcuwi.public.blob.vercel-storage.com/hero.mp4';
+const HERO_VIDEO_URL = process.env.HERO_VIDEO_URL || 'https://blob.santagram.app/hero/hero.mp4';
 
 export async function createLipsyncVideo(audioUrl: string): Promise<string> {
     // Run the Kling lip-sync model

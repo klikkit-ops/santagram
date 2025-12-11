@@ -162,7 +162,7 @@ export default function Hero() {
                                     webkit-playsinline="true"
                                     x5-playsinline="true"
                                 >
-                                    <source src="https://z9igvokaxzvbcuwi.public.blob.vercel-storage.com/hero.mp4" type="video/mp4" />
+                                    <source src="https://blob.santagram.app/hero/hero.mp4" type="video/mp4" />
                                 </video>
 
                                 {/* Mute/Unmute Button - Always Visible in Top Left */}

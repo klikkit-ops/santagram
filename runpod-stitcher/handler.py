@@ -63,7 +63,7 @@ def upload_to_r2(local_path, key, r2_config, content_type='application/octet-str
 def generate_and_stitch_handler(input_data, r2_config):
     """Handle full pipeline: split audio, generate videos via Replicate, stitch together"""
     audio_key = input_data['audio_key']
-    video_url = input_data.get('video_url', 'https://z9igvokaxzvbcuwi.public.blob.vercel-storage.com/hero.mp4')
+    video_url = input_data.get('video_url', 'https://blob.santagram.app/hero/hero.mp4')
     chunk_duration = input_data.get('chunk_duration', 25)
     output_key = input_data['output_key']
     replicate_api_token = input_data.get('replicate_api_token')

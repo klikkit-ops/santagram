@@ -391,7 +391,7 @@ export async function submitGenerateAndStitchVideo(
         };
 
         const audioKey = extractKey(audioUrl);
-        const heroVideoUrl = videoUrl || process.env.HERO_VIDEO_URL || 'https://z9igvokaxzvbcuwi.public.blob.vercel-storage.com/hero.mp4';
+        const heroVideoUrl = videoUrl || process.env.HERO_VIDEO_URL || 'https://blob.santagram.app/hero/hero.mp4';
 
         const jobInput = {
             input: {
