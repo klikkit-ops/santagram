@@ -274,6 +274,8 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({
                 status: order.status || 'pending',
                 child_name: order.child_name,
+                currency,
+                price,
             });
         }
 
