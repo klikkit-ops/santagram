@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { supabase } from '@/lib/supabase';
-import { generateSantaScript, createVideo } from '@/lib/heygen';
+import { generateSantaScript } from '@/lib/script-generator';
+import { generateSpeech } from '@/lib/elevenlabs';
+import { createLipsyncVideoPrediction } from '@/lib/replicate';
 import Stripe from 'stripe';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
@@ -51,17 +53,26 @@ export async function POST(request: NextRequest) {
             });
 
             try {
-                // Create video with HeyGen
-                const { video_id } = await createVideo(script);
+                // Step 1: Generate audio with ElevenLabs
+                console.log('Generating speech with ElevenLabs...');
+                const audioUrl = await generateSpeech(script);
 
-                // Update order with video ID and status
+                // Step 2: Start lipsync video generation with Replicate (async)
+                console.log('Starting Pixverse lipsync generation...');
+                const predictionId = await createLipsyncVideoPrediction(audioUrl);
+
+                // Update order with prediction ID and status
                 await supabase
                     .from('orders')
                     .update({
                         status: 'generating',
-                        heygen_video_id: video_id,
+                        replicate_prediction_id: predictionId,
+                        audio_url: audioUrl,
+                        customer_email: session.customer_details?.email,
                     })
                     .eq('stripe_session_id', session.id);
+
+                console.log('Video generation started, prediction ID:', predictionId);
 
             } catch (videoError) {
                 console.error('Video creation failed:', videoError);

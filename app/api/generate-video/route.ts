@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { generateSantaScript, createVideo } from '@/lib/heygen';
+import { generateSantaScript } from '@/lib/script-generator';
+import { generateSpeech } from '@/lib/elevenlabs';
+import { createLipsyncVideoPrediction } from '@/lib/replicate';
 
 export async function POST(request: NextRequest) {
     try {
@@ -27,9 +29,9 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        if (order.heygen_video_id) {
+        if (order.replicate_prediction_id) {
             return NextResponse.json(
-                { error: 'Video already being generated', video_id: order.heygen_video_id },
+                { error: 'Video already being generated', prediction_id: order.replicate_prediction_id },
                 { status: 400 }
             );
         }
@@ -45,19 +47,23 @@ export async function POST(request: NextRequest) {
             messageType: order.message_type,
         });
 
-        // Create video
-        const { video_id } = await createVideo(script);
+        // Generate audio with ElevenLabs
+        const audioUrl = await generateSpeech(script);
+
+        // Start lipsync video generation with Replicate
+        const predictionId = await createLipsyncVideoPrediction(audioUrl);
 
         // Update order
         await supabase
             .from('orders')
             .update({
                 status: 'generating',
-                heygen_video_id: video_id,
+                replicate_prediction_id: predictionId,
+                audio_url: audioUrl,
             })
             .eq('id', orderId);
 
-        return NextResponse.json({ success: true, video_id });
+        return NextResponse.json({ success: true, prediction_id: predictionId });
     } catch (error) {
         console.error('Generate video error:', error);
         return NextResponse.json(
