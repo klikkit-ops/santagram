@@ -10,6 +10,8 @@ interface VideoStatus {
     video_url?: string;
     child_name?: string;
     error?: string;
+    currency?: string;
+    price?: number;
 }
 
 function SuccessContent() {
@@ -17,6 +19,7 @@ function SuccessContent() {
     const sessionId = searchParams.get('session_id');
     const [videoStatus, setVideoStatus] = useState<VideoStatus>({ status: 'pending' });
     const [pollCount, setPollCount] = useState(0);
+    const [purchaseTracked, setPurchaseTracked] = useState(false);
 
     useEffect(() => {
         if (!sessionId) return;
@@ -48,6 +51,30 @@ function SuccessContent() {
 
         return () => clearInterval(interval);
     }, [sessionId, pollCount]);
+
+    // Track Meta Pixel Purchase event when payment is confirmed
+    useEffect(() => {
+        // Only track once when status changes to 'paid' or 'completed'
+        if ((videoStatus.status === 'paid' || videoStatus.status === 'completed') && !purchaseTracked) {
+            // Check if fbq is available (Meta Pixel loaded)
+            if (typeof window !== 'undefined' && (window as any).fbq) {
+                const currency = videoStatus.currency || 'USD';
+                const price = videoStatus.price || 3.99; // Default fallback
+                
+                (window as any).fbq('track', 'Purchase', {
+                    value: price,
+                    currency: currency,
+                    content_name: 'Personalized Santa Video Message',
+                    content_category: 'Video Message',
+                    content_ids: ['santa-video'],
+                    num_items: 1,
+                });
+                
+                console.log('Meta Pixel Purchase event tracked:', { value: price, currency });
+                setPurchaseTracked(true);
+            }
+        }
+    }, [videoStatus.status, videoStatus.currency, videoStatus.price, purchaseTracked]);
 
     const getStatusMessage = () => {
         switch (videoStatus.status) {

@@ -53,12 +53,45 @@ export async function GET(request: NextRequest) {
             );
         }
 
+        // Get currency and price from Stripe session if available
+        let currency = 'USD';
+        let price = 3.99; // Default fallback
+        
+        if (sessionId && stripe) {
+            try {
+                const stripeSession = await stripe.checkout.sessions.retrieve(sessionId, {
+                    expand: ['line_items'],
+                });
+                
+                // Get currency from session
+                if (stripeSession.currency) {
+                    currency = stripeSession.currency.toUpperCase();
+                }
+                
+                // Get price from line items
+                if (stripeSession.line_items?.data && stripeSession.line_items.data.length > 0) {
+                    const lineItem = stripeSession.line_items.data[0];
+                    if (lineItem.price) {
+                        // Convert from cents to dollars
+                        price = lineItem.price.unit_amount ? lineItem.price.unit_amount / 100 : price;
+                    }
+                } else if (stripeSession.amount_total) {
+                    // Fallback to total amount
+                    price = stripeSession.amount_total / 100;
+                }
+            } catch (stripeError) {
+                console.error('Error retrieving Stripe session for currency/price:', stripeError);
+            }
+        }
+
         // If video is already completed, return the URL
         if (order.status === 'completed' && order.video_url) {
             return NextResponse.json({
                 status: 'completed',
                 video_url: order.video_url,
                 child_name: order.child_name,
+                currency,
+                price,
             });
         }
 
@@ -104,6 +137,8 @@ export async function GET(request: NextRequest) {
                             status: 'completed',
                             video_url: jobStatus.video_url,
                             child_name: order.child_name,
+                            currency,
+                            price,
                         });
                     } else if (jobStatus.status === 'FAILED') {
                         await supabase
@@ -158,6 +193,8 @@ export async function GET(request: NextRequest) {
                             return NextResponse.json({
                                 status: 'pending',
                                 child_name: order.child_name,
+                                currency,
+                                price,
                             });
                         }
                     } catch (stripeError) {
@@ -216,6 +253,8 @@ export async function GET(request: NextRequest) {
                         return NextResponse.json({
                             status: 'generating',
                             child_name: order.child_name,
+                            currency,
+                            price,
                         });
                     } catch (genError) {
                         console.error('Failed to trigger video generation:', genError);
