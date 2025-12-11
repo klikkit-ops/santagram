@@ -158,7 +158,8 @@ export async function GET(request: NextRequest) {
                         await sendVideoEmail(
                             recipientEmail,
                             finalVideoUrl,
-                            order.child_name
+                            order.child_name,
+                            order.id
                         );
                         console.log(`Video email sent to ${recipientEmail}`);
                     } catch (emailError) {

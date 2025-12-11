@@ -66,9 +66,13 @@ export async function storeVideo(videoUrl: string, orderId: string): Promise<str
 export async function sendVideoEmail(
     email: string,
     videoUrl: string,
-    childName: string
+    childName: string,
+    orderId: string
 ): Promise<void> {
     console.log(`Sending video email to: ${email}`);
+    
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://santagram.app';
+    const videoPageUrl = `${baseUrl}/video/${orderId}`;
     
     const resend = getResendClient();
     const result = await resend.emails.send({
@@ -93,12 +97,13 @@ export async function sendVideoEmail(
                                 Santa has prepared a magical personalized video message just for <strong style="color: #ffd700;">${childName}</strong>!
                             </p>
                             
-                            <a href="${videoUrl}" 
+                            <a href="${videoPageUrl}" 
                                style="display: inline-block; background: linear-gradient(135deg, #c41e3a 0%, #8b0000 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(196, 30, 58, 0.4);">
-                                🎁 Download Your Video
+                                🎁 Watch Your Video
                             </a>
                             
                             <p style="color: #a0a0a0; font-size: 14px; margin: 30px 0 0 0;">
+                                Click the button above to watch and download your video!<br>
                                 This magical message was created especially for ${childName}.<br>
                                 Merry Christmas from Santa and all the elves! ✨
                             </p>
