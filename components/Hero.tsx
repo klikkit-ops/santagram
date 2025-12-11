@@ -155,7 +155,7 @@ export default function Hero() {
 
                 {/* Preview Card */}
                 <div className="relative max-w-xl mx-auto">
-                    <div className="glass-card p-0.5 sm:p-1 glow-gold">
+                    <div className="glass-card glow-gold" style={{ padding: '0.6rem' }}>
                         <div
                             ref={containerRef}
                             className="relative aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-red-900/50 to-green-900/50"
@@ -218,7 +218,7 @@ export default function Hero() {
                         </div>
                     </div>
                     {/* Santa Image */}
-                    <div className="absolute -bottom-10 -right-10 w-32 h-32 sm:w-40 sm:h-40 animate-float">
+                    <div className="absolute -bottom-10 -right-10 w-32 h-32 sm:w-40 sm:h-40 animate-float" style={{ left: '-16px' }}>
                         <Image src="/santa.png" alt="Santa Claus" fill className="object-contain drop-shadow-2xl" />
                     </div>
                 </div>
@@ -234,7 +234,7 @@ export default function Hero() {
                         <div className="text-white/60 text-sm">Parent Rating</div>
                     </div>
                     <div className="text-center">
-                        <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">2min</div>
+                        <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">8min</div>
                         <div className="text-white/60 text-sm">Delivery Time</div>
                     </div>
                 </div>
