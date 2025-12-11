@@ -140,7 +140,7 @@ export default function Hero() {
                                 <div className="text-white/60 text-sm">Parent Rating</div>
                             </div>
                             <div className="text-center lg:text-left">
-                                <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">8min</div>
+                                <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">10-15min</div>
                                 <div className="text-white/60 text-sm">Delivery Time</div>
                             </div>
                         </div>
