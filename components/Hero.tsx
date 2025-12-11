@@ -108,8 +108,7 @@ export default function Hero() {
                         {/* Main Heading */}
                         <h1 className="heading-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl mb-6 leading-tight">
                             Create a Magical<br />
-                            <span className="text-white">Video Message</span><br />
-                            from Santa! 🎄
+                            <span className="text-white">Video Message from Santa!</span> 🎄
                         </h1>
 
                         {/* Subheadline */}
