@@ -31,6 +31,7 @@ CREATE TABLE orders (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   stripe_session_id TEXT UNIQUE,
   email TEXT NOT NULL,
+  customer_email TEXT,
   child_name TEXT NOT NULL,
   child_age INTEGER,
   child_gender TEXT,
@@ -38,6 +39,8 @@ CREATE TABLE orders (
   message_type TEXT,
   status TEXT DEFAULT 'pending',
   heygen_video_id TEXT,
+  replicate_prediction_id TEXT,
+  audio_url TEXT,
   video_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -48,6 +51,16 @@ ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
 -- Create policy for service role access
 CREATE POLICY "Allow all for service role" ON orders FOR ALL USING (true);
+```
+
+**If you already have the orders table, run this migration to add missing columns:**
+
+```sql
+-- Add missing columns if they don't exist
+ALTER TABLE orders 
+  ADD COLUMN IF NOT EXISTS customer_email TEXT,
+  ADD COLUMN IF NOT EXISTS replicate_prediction_id TEXT,
+  ADD COLUMN IF NOT EXISTS audio_url TEXT;
 ```
 
 ## Stripe Webhook
