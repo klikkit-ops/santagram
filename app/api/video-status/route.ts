@@ -193,17 +193,17 @@ export async function GET(request: NextRequest) {
                                 })
                                 .eq('id', order.id);
                         } else {
-                            // Long audio - chunked generation
-                            const audioChunks = await splitAudioIntoChunks(audioUrl, MAX_CHUNK_DURATION);
-                            const predictionIds = await createLipsyncVideoChunks(audioChunks);
-
+                            // Long audio - use RunPod orchestration
+                            const outputKey = `videos/${order.id}-santa-message.mp4`;
+                            const runpodJobId = await submitGenerateAndStitchVideo(audioUrl, outputKey, undefined, MAX_CHUNK_DURATION);
+                            
                             await supabase
                                 .from('orders')
                                 .update({
                                     status: 'generating',
-                                    video_chunks: predictionIds,
                                     audio_url: audioUrl,
-                                    stitching_status: 'pending',
+                                    stitching_status: 'processing',
+                                    replicate_prediction_id: `runpod:${runpodJobId}`,
                                 })
                                 .eq('id', order.id);
                         }
