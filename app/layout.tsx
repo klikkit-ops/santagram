@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Snowfall from "@/components/Snowfall";
 import { CurrencyProvider } from "@/components/CurrencyProvider";
+import { Analytics } from "@vercel/analytics/react";
 
 export const metadata: Metadata = {
   title: "Personalized Santa Video Messages | Create Magical Moments | SantaGram",
@@ -87,6 +88,7 @@ export default function RootLayout({
           </main>
           <Footer />
         </CurrencyProvider>
+        <Analytics />
       </body>
     </html>
   );
