@@ -3,8 +3,8 @@ import { supabase } from '@/lib/supabase';
 import { generateSantaScript } from '@/lib/script-generator';
 import { generateSpeech } from '@/lib/elevenlabs';
 import { getAudioDuration } from '@/lib/audio-utils';
-import { splitAudioIntoChunks } from '@/lib/audio-utils';
-import { createLipsyncVideoPrediction, createLipsyncVideoChunks } from '@/lib/replicate';
+import { createLipsyncVideoPrediction } from '@/lib/replicate';
+import { submitGenerateAndStitchVideo } from '@/lib/runpod-stitcher';
 
 const MAX_CHUNK_DURATION = 25; // seconds - Replicate kling-lip-sync model can handle up to ~29 seconds
 

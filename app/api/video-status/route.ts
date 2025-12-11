@@ -5,10 +5,9 @@ import { storeVideo, sendVideoEmail } from '@/lib/video-storage';
 import { stripe } from '@/lib/stripe';
 import { generateSantaScript } from '@/lib/script-generator';
 import { generateSpeech } from '@/lib/elevenlabs';
-import { createLipsyncVideoPrediction, createLipsyncVideoChunks } from '@/lib/replicate';
+import { createLipsyncVideoPrediction } from '@/lib/replicate';
 import { getAudioDuration } from '@/lib/audio-utils';
-import { splitAudioIntoChunks } from '@/lib/audio-utils';
-import { stitchVideoChunks, pollRunPodJobStatus } from '@/lib/runpod-stitcher';
+import { stitchVideoChunks, pollRunPodJobStatus, submitGenerateAndStitchVideo } from '@/lib/runpod-stitcher';
 
 const MAX_CHUNK_DURATION = 25; // seconds - Replicate kling-lip-sync model can handle up to ~29 seconds
 
