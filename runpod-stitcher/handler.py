@@ -229,19 +229,23 @@ def generate_and_stitch_handler(input_data, r2_config):
             loops_needed = max(1, int(remaining_duration / hero_duration) + 1)
             print(f"Looping hero video {loops_needed} times to cover {remaining_duration:.2f} seconds")
             
-            # Create looped hero video
+            # Create looped hero video with re-encoding to ensure compatibility
             looped_hero_path = tmpdir_path / "looped_hero.mp4"
-            # Use ffmpeg to loop the video
             loop_list = tmpdir_path / "loop_list.txt"
             with open(loop_list, 'w') as f:
                 for _ in range(loops_needed):
                     abs_path = hero_video_path.resolve()
                     f.write(f"file '{abs_path}'\n")
             
+            # Re-encode when concatenating to ensure compatibility
             subprocess.run([
                 'ffmpeg', '-f', 'concat', '-safe', '0',
                 '-i', str(loop_list),
-                '-c', 'copy',
+                '-c:v', 'libx264',
+                '-preset', 'medium',
+                '-crf', '23',
+                '-c:a', 'aac',
+                '-b:a', '128k',
                 '-y', str(looped_hero_path)
             ], capture_output=True, text=True, check=True)
             
@@ -250,7 +254,12 @@ def generate_and_stitch_handler(input_data, r2_config):
             subprocess.run([
                 'ffmpeg', '-i', str(looped_hero_path),
                 '-t', str(remaining_duration),
-                '-c', 'copy',
+                '-c:v', 'libx264',
+                '-preset', 'medium',
+                '-crf', '23',
+                '-c:a', 'aac',
+                '-b:a', '128k',
+                '-avoid_negative_ts', 'make_zero',
                 '-y', str(trimmed_hero_path)
             ], capture_output=True, text=True, check=True)
             
@@ -262,10 +271,16 @@ def generate_and_stitch_handler(input_data, r2_config):
                 f.write(f"file '{trimmed_hero_path.resolve()}'\n")
             
             temp_video = tmpdir_path / "temp_video.mp4"
+            # Re-encode when concatenating to ensure both videos play properly
             subprocess.run([
                 'ffmpeg', '-f', 'concat', '-safe', '0',
                 '-i', str(concat_file),
-                '-c', 'copy',
+                '-c:v', 'libx264',
+                '-preset', 'medium',
+                '-crf', '23',
+                '-c:a', 'aac',
+                '-b:a', '128k',
+                '-avoid_negative_ts', 'make_zero',
                 '-y', str(temp_video)
             ], capture_output=True, text=True, check=True)
         else:
