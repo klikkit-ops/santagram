@@ -1,7 +1,49 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
+import { useEffect, useRef, useState } from 'react';
 
 export default function Hero() {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [hasPlayed, setHasPlayed] = useState(false);
+
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || hasPlayed) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    // Check if video is roughly centered (at least 50% visible)
+                    if (entry.isIntersecting && entry.intersectionRatio >= 0.5 && !hasPlayed) {
+                        video.play().catch((error) => {
+                            // If autoplay with audio fails, try muted first then unmute
+                            console.log('Autoplay with audio failed, trying muted:', error);
+                            video.muted = true;
+                            video.play().then(() => {
+                                // Try to unmute after a small delay
+                                setTimeout(() => {
+                                    video.muted = false;
+                                }, 100);
+                            });
+                        });
+                        setHasPlayed(true);
+                        observer.disconnect();
+                    }
+                });
+            },
+            {
+                threshold: 0.5, // Trigger when 50% of the video is visible (roughly centered)
+                rootMargin: '0px',
+            }
+        );
+
+        observer.observe(video);
+
+        return () => observer.disconnect();
+    }, [hasPlayed]);
+
     return (
         <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
             {/* Background Decorations */}
@@ -53,10 +95,8 @@ export default function Hero() {
                     <div className="glass-card p-2 glow-gold">
                         <div className="relative aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-red-900/50 to-green-900/50">
                             <video
+                                ref={videoRef}
                                 className="w-full h-full object-cover"
-                                autoPlay
-                                muted
-                                loop
                                 playsInline
                             >
                                 <source src="https://z9igvokaxzvbcuwi.public.blob.vercel-storage.com/santa-welcome.mp4" type="video/mp4" />
