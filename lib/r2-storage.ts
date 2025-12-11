@@ -105,7 +105,11 @@ export async function downloadFromR2(key: string): Promise<Buffer> {
 export function getPublicUrl(key: string): string {
     if (R2_PUBLIC_URL) {
         // Remove trailing slash if present
-        const baseUrl = R2_PUBLIC_URL.replace(/\/$/, '');
+        let baseUrl = R2_PUBLIC_URL.replace(/\/$/, '');
+        // Ensure it has https:// protocol
+        if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+            baseUrl = `https://${baseUrl}`;
+        }
         // Remove leading slash from key if present
         const cleanKey = key.startsWith('/') ? key.slice(1) : key;
         return `${baseUrl}/${cleanKey}`;
