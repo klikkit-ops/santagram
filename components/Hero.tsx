@@ -139,7 +139,7 @@ export default function Hero() {
                                 playsInline
                                 muted
                             >
-                                <source src="https://z9igvokaxzvbcuwi.public.blob.vercel-storage.com/santa-welcome.mp4" type="video/mp4" />
+                                <source src="https://z9igvokaxzvbcuwi.public.blob.vercel-storage.com/hero.mp4" type="video/mp4" />
                             </video>
 
                             {/* Video Controls */}
