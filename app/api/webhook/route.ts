@@ -4,7 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { generateSantaScript } from '@/lib/script-generator';
 import { generateSpeech } from '@/lib/elevenlabs';
 import { getAudioDuration } from '@/lib/audio-utils';
-import { createLipsyncVideoPrediction, createLipsyncVideoChunks } from '@/lib/replicate';
+import { createLipsyncVideoPrediction } from '@/lib/replicate';
+import { generateAndStitchVideo } from '@/lib/runpod-stitcher';
 import Stripe from 'stripe';
 
 const MAX_CHUNK_DURATION = 25; // seconds - Replicate kling-lip-sync model can handle up to ~29 seconds
@@ -81,41 +82,83 @@ export async function POST(request: NextRequest) {
 
                     console.log('Video generation started, prediction ID:', predictionId);
                 } else {
-                    // Long audio - use chunked generation
-                    console.log(`Audio is long (${audioDuration}s), using chunked generation`);
+                    // Long audio - use RunPod orchestration (split, generate, stitch in one call)
+                    console.log(`Audio is long (${audioDuration}s), using RunPod orchestration`);
                     
                     try {
-                        // Import splitAudioIntoChunks dynamically to avoid circular dependencies
-                        const { splitAudioIntoChunks } = await import('@/lib/audio-utils');
-                        console.log('[webhook] Starting audio splitting...');
-                        const audioChunks = await splitAudioIntoChunks(audioUrl, MAX_CHUNK_DURATION);
-                        console.log(`[webhook] Audio split into ${audioChunks.length} chunks:`, audioChunks);
+                        const orderId = session.metadata?.orderId || `order_${Date.now()}`;
+                        const outputKey = `videos/${orderId}-santa-message.mp4`;
                         
-                        console.log('[webhook] Creating Replicate predictions for chunks...');
-                        const predictionIds = await createLipsyncVideoChunks(audioChunks);
-                        console.log(`[webhook] Created ${predictionIds.length} Replicate predictions:`, predictionIds);
-
+                        console.log('[webhook] Starting RunPod orchestration (split + generate + stitch)...');
+                        
+                        // Update order status to indicate processing
                         await supabase
                             .from('orders')
                             .update({
                                 status: 'generating',
-                                video_chunks: predictionIds,
                                 audio_url: audioUrl,
                                 customer_email: session.customer_details?.email,
-                                stitching_status: 'pending',
+                                stitching_status: 'processing', // RunPod handles everything
                             })
                             .eq('stripe_session_id', session.id);
 
-                        console.log(`[webhook] Chunked video generation started successfully, ${predictionIds.length} predictions:`, predictionIds);
-                    } catch (chunkError) {
-                        console.error('[webhook] Error in chunked generation flow:', chunkError);
-                        console.error('[webhook] Error details:', {
-                            message: chunkError instanceof Error ? chunkError.message : String(chunkError),
-                            stack: chunkError instanceof Error ? chunkError.stack : undefined,
-                            audioUrl,
-                            audioDuration,
-                        });
-                        throw chunkError; // Re-throw to be caught by outer catch
+                        // Start RunPod job (this will handle splitting, Replicate calls, and stitching)
+                        // Note: This is async - RunPod will process in background
+                        // We'll poll for completion via video-status endpoint
+                        generateAndStitchVideo(audioUrl, outputKey, undefined, MAX_CHUNK_DURATION)
+                            .then(async (finalVideoUrl) => {
+                                console.log(`[webhook] RunPod orchestration completed: ${finalVideoUrl}`);
+                                
+                                // Get order to send email
+                                const { data: order } = await supabase
+                                    .from('orders')
+                                    .select('*')
+                                    .eq('stripe_session_id', session.id)
+                                    .single();
+                                
+                                if (order) {
+                                    const recipientEmail = order.customer_email || order.email;
+                                    if (recipientEmail) {
+                                        try {
+                                            const { sendVideoEmail } = await import('@/lib/video-storage');
+                                            await sendVideoEmail(
+                                                recipientEmail,
+                                                finalVideoUrl,
+                                                order.child_name,
+                                                order.id
+                                            );
+                                            console.log(`[webhook] Video email sent to ${recipientEmail}`);
+                                        } catch (emailError) {
+                                            console.error('[webhook] Failed to send video email:', emailError);
+                                        }
+                                    }
+                                    
+                                    // Update order with final video
+                                    await supabase
+                                        .from('orders')
+                                        .update({
+                                            status: 'completed',
+                                            video_url: finalVideoUrl,
+                                            stitching_status: 'completed',
+                                        })
+                                        .eq('id', order.id);
+                                }
+                            })
+                            .catch(async (error) => {
+                                console.error('[webhook] RunPod orchestration failed:', error);
+                                await supabase
+                                    .from('orders')
+                                    .update({
+                                        status: 'failed',
+                                        stitching_status: 'failed',
+                                    })
+                                    .eq('stripe_session_id', session.id);
+                            });
+
+                        console.log('[webhook] RunPod orchestration started (processing in background)');
+                    } catch (orchestrationError) {
+                        console.error('[webhook] Error starting RunPod orchestration:', orchestrationError);
+                        throw orchestrationError;
                     }
                 }
 

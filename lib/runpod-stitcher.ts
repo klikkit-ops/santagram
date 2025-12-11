@@ -251,7 +251,186 @@ export async function splitAudioWithRunPod(
         throw new Error(`RunPod endpoint not accessible on any domain (tried: ${domains.join(', ')}). Last error: ${lastError?.message || 'Unknown'}`);
     } catch (error) {
         console.error('[splitAudioWithRunPod] Error:', error);
-        throw new Error(`Failed to split audio: ${error instanceof Error ? error.message : String(error)}`);
+            throw new Error(`Failed to split audio: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+
+/**
+ * Submit a job to RunPod and poll its status until completion
+ * @param jobInput - The input payload for the RunPod job
+ * @param domain - The RunPod API domain to use (e.g., 'api.runpod.ai')
+ * @returns The output of the completed job
+ */
+async function submitAndPollRunPodJob(jobInput: any, domain: string): Promise<any> {
+    const endpointUrl = `https://${domain}/v2/${RUNPOD_ENDPOINT_ID}/run`;
+    console.log(`[RunPod] Submitting job to RunPod endpoint: ${endpointUrl}`);
+    console.log(`[RunPod] Job input (without secrets):`, {
+        mode: jobInput.input.mode,
+        audio_key: jobInput.input.audio_key,
+        video_chunks: jobInput.input.video_chunks ? jobInput.input.video_chunks.length : 0,
+        chunk_duration: jobInput.input.chunk_duration,
+        output_key: jobInput.input.output_key,
+        has_r2_config: !!(jobInput.input.r2_account_id && jobInput.input.r2_bucket_name),
+    });
+
+    const response = await fetch(endpointUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${RUNPOD_API_KEY}`,
+        },
+        body: JSON.stringify(jobInput),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[RunPod] RunPod API error:`, {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorText,
+            endpointUrl,
+        });
+        throw new Error(`RunPod API error: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    const jobId = result.id;
+    console.log(`[RunPod] RunPod job submitted on ${domain}: ${jobId}`);
+
+    // Poll for job completion
+    const maxAttempts = 300; // 25 minutes max (5 second intervals) - longer for full pipeline
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+
+        const statusResponse = await fetch(
+            `https://${domain}/v2/${RUNPOD_ENDPOINT_ID}/status/${jobId}`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${RUNPOD_API_KEY}`,
+                },
+            }
+        );
+
+        if (!statusResponse.ok) {
+            throw new Error(`Failed to check RunPod job status: ${statusResponse.status}`);
+        }
+
+        const statusResult = await statusResponse.json();
+        const status = statusResult.status;
+
+        console.log(`[RunPod] Job ${jobId} status: ${status} (attempt ${attempts + 1}/${maxAttempts})`);
+
+        if (status === 'COMPLETED') {
+            return statusResult.output;
+        } else if (status === 'FAILED' || status === 'CANCELED') {
+            const error = statusResult.error || 'Unknown error';
+            throw new Error(`RunPod job ${jobId} failed: ${error}`);
+        }
+
+        attempts++;
+    }
+
+    throw new Error(`RunPod job ${jobId} timed out after ${maxAttempts * 5} seconds.`);
+}
+
+/**
+ * Generate and stitch video in one RunPod call (orchestrates split, Replicate calls, and stitch)
+ * This reduces Vercel API calls from 5+ to 1
+ * @param audioUrl - R2 URL of the full audio file
+ * @param outputKey - R2 key for the final stitched video
+ * @param videoUrl - URL of the hero video (defaults to HERO_VIDEO_URL)
+ * @param chunkDuration - Duration of each chunk in seconds (default: 25)
+ * @returns R2 URL of the final stitched video
+ */
+export async function generateAndStitchVideo(
+    audioUrl: string,
+    outputKey: string,
+    videoUrl?: string,
+    chunkDuration: number = 25
+): Promise<string> {
+    console.log(`[generateAndStitchVideo] Starting full pipeline orchestration`);
+    console.log(`[generateAndStitchVideo] Configuration check:`, {
+        hasApiKey: !!RUNPOD_API_KEY,
+        hasEndpointId: !!RUNPOD_ENDPOINT_ID,
+        endpointId: RUNPOD_ENDPOINT_ID || 'NOT SET',
+        audioUrl,
+        outputKey,
+        videoUrl: videoUrl || 'default',
+        chunkDuration,
+    });
+
+    if (!RUNPOD_API_KEY) {
+        const error = 'RUNPOD_API_KEY is not configured. Please set it in your environment variables.';
+        console.error(`[generateAndStitchVideo] ${error}`);
+        throw new Error(error);
+    }
+
+    if (!RUNPOD_ENDPOINT_ID) {
+        const error = 'RUNPOD_ENDPOINT_ID is not configured. Please set it in your environment variables.';
+        console.error(`[generateAndStitchVideo] ${error}`);
+        throw new Error(error);
+    }
+
+    const replicateApiToken = process.env.REPLICATE_API_TOKEN;
+    if (!replicateApiToken) {
+        const error = 'REPLICATE_API_TOKEN is not configured. Please set it in your environment variables.';
+        console.error(`[generateAndStitchVideo] ${error}`);
+        throw new Error(error);
+    }
+
+    try {
+        const extractKey = (url: string): string => {
+            try {
+                const urlObj = new URL(url);
+                return urlObj.pathname.startsWith('/') ? urlObj.pathname.slice(1) : urlObj.pathname;
+            } catch {
+                return url;
+            }
+        };
+
+        const audioKey = extractKey(audioUrl);
+        const heroVideoUrl = videoUrl || process.env.HERO_VIDEO_URL || 'https://z9igvokaxzvbcuwi.public.blob.vercel-storage.com/hero.mp4';
+
+        const jobInput = {
+            input: {
+                mode: 'generate_and_stitch',
+                audio_key: audioKey,
+                video_url: heroVideoUrl,
+                chunk_duration: chunkDuration,
+                output_key: outputKey,
+                replicate_api_token: replicateApiToken,
+                r2_account_id: process.env.CLOUDFLARE_R2_ACCOUNT_ID,
+                r2_access_key_id: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID,
+                r2_secret_access_key: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+                r2_bucket_name: process.env.CLOUDFLARE_R2_BUCKET_NAME,
+                r2_public_url: process.env.CLOUDFLARE_R2_PUBLIC_URL,
+            },
+        };
+
+        const domains = ['api.runpod.ai', 'api.runpod.io'];
+        let lastError: Error | null = null;
+
+        for (const domain of domains) {
+            try {
+                const output = await submitAndPollRunPodJob(jobInput, domain);
+                if (output && output.video_url) {
+                    console.log(`[generateAndStitchVideo] Full pipeline completed: ${output.video_url}`);
+                    return output.video_url;
+                } else {
+                    throw new Error('RunPod job completed but no video_url in output.');
+                }
+            } catch (error) {
+                console.warn(`[generateAndStitchVideo] Pipeline failed on domain ${domain}:`, error);
+                lastError = error instanceof Error ? error : new Error(String(error));
+            }
+        }
+        throw new Error(`RunPod endpoint not accessible on any domain (tried: ${domains.join(', ')}). Last error: ${lastError?.message || 'Unknown'}`);
+
+    } catch (error) {
+        console.error('[generateAndStitchVideo] Error:', error);
+        throw new Error(`Failed to generate and stitch video: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 

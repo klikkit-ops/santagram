@@ -169,11 +169,21 @@ export async function GET(request: NextRequest) {
         if (isChunked) {
             // Handle chunked video generation
             const predictionIds = order.video_chunks as string[];
+            console.log(`[video-status] Checking ${predictionIds.length} chunk predictions for order ${order.id}`);
             const statuses = await getLipsyncPredictionStatuses(predictionIds);
+
+            // Log status of each prediction
+            console.log(`[video-status] Prediction statuses:`, statuses.map(s => ({
+                id: s.id.substring(0, 8) + '...',
+                status: s.status,
+                hasOutput: !!s.output,
+                outputPreview: s.output ? s.output.substring(0, 50) + '...' : 'none'
+            })));
 
             // Check if any failed
             const failed = statuses.find(s => s.status === 'failed');
             if (failed) {
+                console.error(`[video-status] Prediction failed:`, failed);
                 await supabase
                     .from('orders')
                     .update({ status: 'failed' })
@@ -186,6 +196,8 @@ export async function GET(request: NextRequest) {
 
             // Check if all succeeded
             const allSucceeded = statuses.every(s => s.status === 'succeeded' && s.output);
+            console.log(`[video-status] All succeeded: ${allSucceeded}, stitching_status: ${order.stitching_status}`);
+            
             if (allSucceeded) {
                 const videoChunkUrls = statuses.map(s => s.output!).filter(Boolean);
 
@@ -201,6 +213,7 @@ export async function GET(request: NextRequest) {
 
                 // Start stitching if not already started
                 if (order.stitching_status !== 'processing' && order.stitching_status !== 'completed') {
+                    console.log(`[video-status] Starting stitching for order ${order.id} with ${videoChunkUrls.length} chunks`);
                     try {
                         await supabase
                             .from('orders')
@@ -209,7 +222,13 @@ export async function GET(request: NextRequest) {
 
                         // Stitch videos together
                         const outputKey = `videos/${order.id}-santa-message.mp4`;
+                        console.log(`[video-status] Calling stitchVideoChunks with:`, {
+                            chunkCount: videoChunkUrls.length,
+                            audioUrl: order.audio_url,
+                            outputKey
+                        });
                         const finalVideoUrl = await stitchVideoChunks(videoChunkUrls, order.audio_url, outputKey);
+                        console.log(`[video-status] Stitching completed, final video URL: ${finalVideoUrl}`);
 
                         // Store video URL and send email
                         const recipientEmail = order.customer_email || order.email;
