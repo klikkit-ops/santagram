@@ -196,8 +196,22 @@ export async function splitAudioWithRunPod(
         };
 
         // Submit job to RunPod
+        // For RunPod Serverless, the API format is: https://api.runpod.io/v2/{endpoint_id}/run
         const endpointUrl = `https://api.runpod.io/v2/${RUNPOD_ENDPOINT_ID}/run`;
         console.log(`[splitAudioWithRunPod] Submitting job to RunPod endpoint: ${endpointUrl}`);
+        
+        // First, verify the endpoint exists by checking its status
+        try {
+            const healthCheckUrl = `https://api.runpod.io/v2/${RUNPOD_ENDPOINT_ID}/health`;
+            const healthResponse = await fetch(healthCheckUrl, {
+                headers: {
+                    'Authorization': `Bearer ${RUNPOD_API_KEY}`,
+                },
+            });
+            console.log(`[splitAudioWithRunPod] Endpoint health check: ${healthResponse.status} ${healthResponse.statusText}`);
+        } catch (healthError) {
+            console.warn(`[splitAudioWithRunPod] Health check failed (this is okay):`, healthError);
+        }
         console.log(`[splitAudioWithRunPod] Job input (without secrets):`, {
             mode: jobInput.input.mode,
             audio_key: jobInput.input.audio_key,
