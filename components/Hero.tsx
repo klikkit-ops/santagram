@@ -188,13 +188,13 @@ export default function Hero() {
                         <div className="absolute -bottom-10 -right-10 w-32 h-32 sm:w-40 sm:h-40 animate-float" style={{ left: '-16px' }}>
                             <Image src="/santa.png" alt="Santa Claus" fill className="object-contain drop-shadow-2xl" />
                         </div>
-                    </div>
-                    
-                    {/* Trust Badge - Desktop Only (below video) */}
-                    <div className="hidden lg:flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mt-6 border border-white/20">
-                        <span className="text-xl">🎅</span>
-                        <span className="text-white/80 text-sm">Trusted by 10,000+ happy families</span>
-                        <span className="text-xl">⭐</span>
+                        
+                        {/* Trust Badge - Desktop Only (below video) */}
+                        <div className="hidden lg:flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mt-6 border border-white/20 w-full">
+                            <span className="text-xl">🎅</span>
+                            <span className="text-white/80 text-sm">Trusted by 10,000+ happy families</span>
+                            <span className="text-xl">⭐</span>
+                        </div>
                     </div>
                 </div>
             </div>
