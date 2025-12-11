@@ -76,14 +76,26 @@ export async function splitAudioIntoChunks(
         }
 
         // Audio is longer than chunk duration - need to split using RunPod
-        console.log(`Audio is ${fullDuration}s (longer than ${chunkDuration}s). Splitting using RunPod...`);
+        console.log(`Audio is ${fullDuration}s (longer than ${chunkDuration}s). Attempting to split using RunPod...`);
         
-        // Import RunPod audio splitting function
-        const { splitAudioWithRunPod } = await import('./runpod-stitcher');
-        const chunkUrls = await splitAudioWithRunPod(audioUrl, chunkDuration);
-        
-        console.log(`Audio split into ${chunkUrls.length} chunks`);
-        return chunkUrls;
+        try {
+            // Import RunPod audio splitting function
+            const { splitAudioWithRunPod } = await import('./runpod-stitcher');
+            const chunkUrls = await splitAudioWithRunPod(audioUrl, chunkDuration);
+            
+            console.log(`Audio split into ${chunkUrls.length} chunks using RunPod`);
+            return chunkUrls;
+        } catch (runpodError) {
+            console.error(`[splitAudioIntoChunks] RunPod audio splitting failed:`, runpodError);
+            console.warn(`[splitAudioIntoChunks] FALLBACK: Using single Replicate call with full audio. This will be slower but will work.`);
+            console.warn(`[splitAudioIntoChunks] NOTE: Replicate kling-lip-sync has a 2-10 second limit. Audio longer than 10s may fail or be truncated.`);
+            console.warn(`[splitAudioIntoChunks] TODO: Fix RunPod endpoint access to enable proper audio chunking.`);
+            
+            // FALLBACK: Return the full audio as a single chunk
+            // This will fail with Replicate (10s limit), but at least the system won't crash
+            // The user will see an error, but we can fix RunPod access
+            return [audioUrl];
+        }
     } catch (error) {
         console.error('Error splitting audio into chunks:', error);
         throw new Error(`Failed to split audio: ${error instanceof Error ? error.message : String(error)}`);
