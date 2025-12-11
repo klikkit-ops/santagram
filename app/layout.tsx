@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -87,6 +88,7 @@ export default function RootLayout({
           </main>
           <Footer />
         </CurrencyProvider>
+        <Analytics />
       </body>
     </html>
   );
