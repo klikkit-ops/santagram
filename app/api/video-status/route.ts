@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
                         const audioUrl = await generateSpeech(script);
 
                         // Start video generation
-                        const predictionId = await createLipsyncVideoPrediction(audioUrl);
+                        const predictionId = await createLipsyncVideoPrediction(audioUrl, script);
 
                         // Update order
                         await supabase

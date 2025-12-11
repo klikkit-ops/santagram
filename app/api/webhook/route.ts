@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
                 // Step 2: Start lipsync video generation with Replicate (async)
                 console.log('Starting Pixverse lipsync generation...');
-                const predictionId = await createLipsyncVideoPrediction(audioUrl);
+                const predictionId = await createLipsyncVideoPrediction(audioUrl, script);
 
                 // Update order with prediction ID and status
                 await supabase

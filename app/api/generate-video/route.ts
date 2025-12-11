@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         const audioUrl = await generateSpeech(script);
 
         // Start lipsync video generation with Replicate
-        const predictionId = await createLipsyncVideoPrediction(audioUrl);
+        const predictionId = await createLipsyncVideoPrediction(audioUrl, script);
 
         // Update order
         await supabase

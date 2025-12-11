@@ -42,5 +42,36 @@ export async function generateSpeech(script: string): Promise<string> {
         contentType: 'audio/mpeg',
     });
 
+    console.log('Audio uploaded to:', blob.url);
+
+    // Verify the audio URL is accessible (with retry)
+    let accessible = false;
+    let attempts = 0;
+    const maxAttempts = 5;
+    
+    while (!accessible && attempts < maxAttempts) {
+        try {
+            // Small delay to ensure CDN propagation
+            if (attempts > 0) {
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+            }
+            
+            const headResponse = await fetch(blob.url, { method: 'HEAD' });
+            if (headResponse.ok) {
+                accessible = true;
+                console.log(`Audio URL verified after ${attempts + 1} attempt(s)`);
+            } else {
+                console.warn(`Audio URL not accessible (status ${headResponse.status}), attempt ${attempts + 1}/${maxAttempts}`);
+            }
+        } catch (error) {
+            console.warn(`Error verifying audio URL (attempt ${attempts + 1}/${maxAttempts}):`, error);
+        }
+        attempts++;
+    }
+
+    if (!accessible) {
+        throw new Error(`Audio URL is not accessible after ${maxAttempts} attempts: ${blob.url}`);
+    }
+
     return blob.url;
 }

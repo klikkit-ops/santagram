@@ -27,15 +27,41 @@ export async function createLipsyncVideo(audioUrl: string): Promise<string> {
 }
 
 // Async version that returns prediction ID for polling
-export async function createLipsyncVideoPrediction(audioUrl: string): Promise<string> {
+export async function createLipsyncVideoPrediction(audioUrl: string, script?: string): Promise<string> {
+    // Verify audio URL is accessible before creating prediction
+    try {
+        const headResponse = await fetch(audioUrl, { method: 'HEAD' });
+        if (!headResponse.ok) {
+            throw new Error(`Audio URL not accessible: ${headResponse.status} ${headResponse.statusText}`);
+        }
+        console.log('Verified audio URL is accessible before Replicate call:', audioUrl);
+    } catch (error) {
+        console.error('Error verifying audio URL:', error);
+        throw new Error(`Audio URL verification failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    const input: {
+        video_url: string;
+        audio_url: string;
+        text?: string;
+    } = {
+        video_url: HERO_VIDEO_URL,
+        audio_url: audioUrl,
+    };
+
+    // Add text as fallback if provided (some models require it)
+    if (script) {
+        input.text = script;
+    }
+
+    console.log('Creating Replicate prediction with audio URL:', audioUrl);
+    
     const prediction = await replicate.predictions.create({
         model: 'kwaivgi/kling-lip-sync',
-        input: {
-            video_url: HERO_VIDEO_URL,
-            audio_url: audioUrl,
-        },
+        input,
     });
 
+    console.log('Replicate prediction created:', prediction.id);
     return prediction.id;
 }
 
