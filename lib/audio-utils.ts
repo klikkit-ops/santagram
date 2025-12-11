@@ -55,6 +55,15 @@ export async function getAudioDuration(audioUrl: string): Promise<number> {
 
 /**
  * Split an audio file into chunks
+ * 
+ * TEMPORARY: For audio longer than 30s, we'll use a single Replicate call with the full audio.
+ * Replicate can handle longer audio files, it just takes more time.
+ * 
+ * TODO: Implement proper audio splitting using RunPod with ffmpeg:
+ * 1. Create a RunPod function to split audio: ffmpeg -i input.mp3 -f segment -segment_time 30 -c copy chunk_%03d.mp3
+ * 2. Upload each chunk to R2
+ * 3. Return the chunk URLs
+ * 
  * @param audioUrl - URL of the audio file
  * @param chunkDuration - Duration of each chunk in seconds (default: 30)
  * @returns Array of R2 URLs for each chunk
@@ -73,47 +82,14 @@ export async function splitAudioIntoChunks(
             return [audioUrl];
         }
 
-        // Download the full audio file
-        let audioBuffer: Buffer;
+        // TEMPORARY WORKAROUND: For audio longer than 30s, use a single Replicate call
+        // This is slower but works reliably. Proper chunking will be implemented later.
+        console.log(`[TEMPORARY] Audio is ${fullDuration}s (longer than ${chunkDuration}s). Using single Replicate call with full audio.`);
+        console.log(`[TODO] Implement RunPod-based audio splitting for better performance.`);
         
-        if (audioUrl.includes('r2.dev') || audioUrl.includes('r2.cloudflarestorage.com')) {
-            const url = new URL(audioUrl);
-            const key = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
-            audioBuffer = await downloadFromR2(key);
-        } else {
-            const response = await fetch(audioUrl);
-            if (!response.ok) {
-                throw new Error(`Failed to download audio: ${response.status} ${response.statusText}`);
-            }
-            const arrayBuffer = await response.arrayBuffer();
-            audioBuffer = Buffer.from(arrayBuffer);
-        }
-
-        // Calculate number of chunks needed
-        const numChunks = Math.ceil(fullDuration / chunkDuration);
-        const overlapSeconds = 0.5; // Small overlap for smooth transitions
-        const overlapBytes = Math.floor((audioBuffer.length / fullDuration) * overlapSeconds);
-
-        console.log(`Splitting audio into ${numChunks} chunks of ~${chunkDuration}s each`);
-
-        // For now, we'll need to use RunPod or a server-side tool to actually split the audio
-        // This function will be called from RunPod stitching service
-        // For now, return the chunks that will be created by RunPod
-        
-        // This is a placeholder - actual splitting will happen in RunPod
-        // We'll return chunk URLs that RunPod will create
-        const chunkUrls: string[] = [];
-        const baseKey = `audio/chunks/${Date.now()}`;
-        
-        for (let i = 0; i < numChunks; i++) {
-            const chunkKey = `${baseKey}-chunk-${i + 1}.mp3`;
-            // The actual chunk will be created by RunPod, but we'll prepare the keys
-            chunkUrls.push(getPublicUrl(chunkKey));
-        }
-
-        // Note: Actual audio splitting will be done by RunPod when processing
-        // This function prepares the chunk structure
-        return chunkUrls;
+        // Return the full audio URL as a single "chunk"
+        // This will be processed as a single video, which Replicate can handle
+        return [audioUrl];
     } catch (error) {
         console.error('Error splitting audio into chunks:', error);
         throw new Error(`Failed to split audio: ${error instanceof Error ? error.message : String(error)}`);
