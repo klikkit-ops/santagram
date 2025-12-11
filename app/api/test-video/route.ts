@@ -6,13 +6,12 @@ import { createLipsyncVideoPrediction } from '@/lib/replicate';
 
 // TEMPORARY TEST ENDPOINT - Remove before production!
 export async function POST(request: NextRequest) {
-    // Only allow in development
-    if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_TEST_ENDPOINT) {
-        return NextResponse.json(
-            { error: 'Test endpoint not available in production' },
-            { status: 403 }
-        );
-    }
+    // Log environment variable status (not the actual values)
+    console.log('🔧 ENV CHECK:', {
+        hasElevenLabsKey: !!process.env.ELEVENLABS_API_KEY,
+        hasReplicateToken: !!process.env.REPLICATE_API_TOKEN,
+        hasBlobToken: !!process.env.BLOB_READ_WRITE_TOKEN,
+    });
 
     try {
         const body = await request.json();
