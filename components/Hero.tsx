@@ -51,22 +51,16 @@ export default function Hero() {
                 {/* Preview Card */}
                 <div className="relative max-w-2xl mx-auto">
                     <div className="glass-card p-2 glow-gold">
-                        <div className="relative aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-red-900/50 to-green-900/50 flex items-center justify-center">
-                            <div className="text-center">
-                                <div className="text-8xl mb-4">🎅</div>
-                                <p className="text-white/80 text-lg">
-                                    &quot;Ho ho ho! Hello there, <span className="text-[var(--gold)] font-semibold">[Child&apos;s Name]</span>!&quot;
-                                </p>
-                                <p className="text-white/60 text-sm mt-2">Preview of your personalized video</p>
-                            </div>
-                            {/* Play Button Overlay */}
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center cursor-pointer hover:bg-white/30 transition-colors">
-                                    <svg className="w-10 h-10 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M8 5v14l11-7z" />
-                                    </svg>
-                                </div>
-                            </div>
+                        <div className="relative aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-red-900/50 to-green-900/50">
+                            <video
+                                className="w-full h-full object-cover"
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                            >
+                                <source src="https://z9igvokaxzvbcuwi.public.blob.vercel-storage.com/santa-welcome.mp4" type="video/mp4" />
+                            </video>
                         </div>
                     </div>
                     {/* Santa Image */}
