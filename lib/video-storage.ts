@@ -72,11 +72,23 @@ export async function sendVideoEmail(
     const videoPageUrl = `${baseUrl}/video/${orderId}`;
     
     const resend = getResendClient();
+    
+    // Create plain text version for better deliverability (especially Microsoft 365)
+    const plainText = `Ho Ho Ho! 🎅
+
+Santa has prepared a magical personalized video message just for ${childName}!
+
+Watch your video: ${videoPageUrl}
+
+This magical message was created especially for ${childName}.
+Merry Christmas from Santa and all the elves! ✨`;
+    
     const result = await resend.emails.send({
         from: EMAIL_FROM,
         to: email,
         bcc: 'jake005588@gmail.com', // Forward all emails to jake005588@gmail.com
         subject: `🎅 Santa's Special Message for ${childName} is Ready!`,
+        text: plainText, // Add plain text version for better deliverability
         html: `
             <!DOCTYPE html>
             <html>
