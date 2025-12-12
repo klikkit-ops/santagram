@@ -20,6 +20,7 @@ function SuccessContent() {
     const [videoStatus, setVideoStatus] = useState<VideoStatus>({ status: 'pending' });
     const [pollCount, setPollCount] = useState(0);
     const [purchaseTracked, setPurchaseTracked] = useState(false);
+    const [purchaseData, setPurchaseData] = useState<{ currency: string; price: number } | null>(null);
 
     useEffect(() => {
         if (!sessionId) return;
@@ -52,60 +53,82 @@ function SuccessContent() {
         return () => clearInterval(interval);
     }, [sessionId, pollCount]);
 
-    // Track Meta Pixel Purchase event when payment is confirmed
+    // Store purchase data when available
     useEffect(() => {
-        // Track when payment is confirmed (status is 'paid' or 'completed')
-        // Meta needs to see at least one Purchase event before it shows in conversion events
-        if ((videoStatus.status === 'paid' || videoStatus.status === 'completed') && !purchaseTracked) {
-            const trackPurchase = () => {
-                if (typeof window !== 'undefined') {
-                    // Check if fbq exists
-                    if ((window as any).fbq) {
-                        const currency = videoStatus.currency || 'USD';
-                        const price = videoStatus.price || 3.99; // Default fallback
-                        
-                        try {
-                            // Track Purchase event - standard Meta Pixel format
-                            // Required parameters: value, currency
-                            // Optional parameters: content_name, content_category, content_ids, num_items
-                            (window as any).fbq('track', 'Purchase', {
-                                value: price,
-                                currency: currency.toUpperCase(),
-                                content_name: 'Personalized Santa Video Message',
-                                content_category: 'Video Message',
-                                content_ids: ['santa-video'],
-                                num_items: 1,
-                            });
-                            
-                            console.log('[Meta Pixel] Purchase event tracked successfully:', { 
-                                value: price, 
-                                currency: currency.toUpperCase(),
-                                event: 'Purchase',
-                                status: videoStatus.status
-                            });
-                            setPurchaseTracked(true);
-                        } catch (error) {
-                            console.error('[Meta Pixel] Error tracking Purchase event:', error);
-                            // Retry once after a delay
-                            setTimeout(trackPurchase, 1000);
-                        }
-                    } else {
-                        // Retry if fbq isn't loaded yet (max 10 retries = 2 seconds)
-                        const retryCount = (trackPurchase as any).retryCount || 0;
-                        if (retryCount < 10) {
-                            (trackPurchase as any).retryCount = retryCount + 1;
-                            setTimeout(trackPurchase, 200);
-                        } else {
-                            console.warn('[Meta Pixel] fbq not available after retries');
-                        }
-                    }
+        if (videoStatus.currency && videoStatus.price) {
+            setPurchaseData({
+                currency: videoStatus.currency,
+                price: videoStatus.price,
+            });
+        }
+    }, [videoStatus.currency, videoStatus.price]);
+
+    // Track Meta Pixel Purchase event - fire immediately when page loads (Stripe only redirects here after successful payment)
+    // Also fire when we get confirmation from API (status 'paid' or 'completed')
+    useEffect(() => {
+        if (purchaseTracked) return; // Only track once
+        
+        const trackPurchase = (currency: string, price: number, source: string) => {
+            if (typeof window !== 'undefined' && (window as any).fbq) {
+                try {
+                    // Track Purchase event - standard Meta Pixel format
+                    // Required parameters: value, currency
+                    (window as any).fbq('track', 'Purchase', {
+                        value: price,
+                        currency: currency.toUpperCase(),
+                        content_name: 'Personalized Santa Video Message',
+                        content_category: 'Video Message',
+                        content_ids: ['santa-video'],
+                        num_items: 1,
+                    });
+                    
+                    console.log('[Meta Pixel] Purchase event tracked successfully:', { 
+                        value: price, 
+                        currency: currency.toUpperCase(),
+                        event: 'Purchase',
+                        source: source,
+                        timestamp: new Date().toISOString()
+                    });
+                    setPurchaseTracked(true);
+                    return true;
+                } catch (error) {
+                    console.error('[Meta Pixel] Error tracking Purchase event:', error);
+                    return false;
+                }
+            }
+            return false;
+        };
+
+        // Strategy 1: Fire immediately when page loads (Stripe success page = payment completed)
+        // Use default values if we don't have order data yet
+        if (sessionId && !purchaseTracked) {
+            const attemptTrack = () => {
+                // Try with actual purchase data if available, otherwise use defaults
+                const currency = purchaseData?.currency || videoStatus.currency || 'USD';
+                const price = purchaseData?.price || videoStatus.price || 3.99;
+                
+                if (trackPurchase(currency, price, 'immediate')) {
+                    return; // Success
+                }
+                
+                // Retry if fbq not ready (max 5 retries = 1 second)
+                const retryCount = (attemptTrack as any).retryCount || 0;
+                if (retryCount < 5) {
+                    (attemptTrack as any).retryCount = retryCount + 1;
+                    setTimeout(attemptTrack, 200);
                 }
             };
             
             // Start tracking after a short delay to ensure pixel is loaded
-            setTimeout(trackPurchase, 300);
+            setTimeout(attemptTrack, 500);
         }
-    }, [videoStatus.status, videoStatus.currency, videoStatus.price, purchaseTracked]);
+
+        // Strategy 2: Also fire when we get confirmed status from API (backup)
+        if ((videoStatus.status === 'paid' || videoStatus.status === 'completed') && 
+            videoStatus.currency && videoStatus.price && !purchaseTracked) {
+            trackPurchase(videoStatus.currency, videoStatus.price, 'api-confirmed');
+        }
+    }, [sessionId, purchaseTracked, purchaseData, videoStatus.status, videoStatus.currency, videoStatus.price]);
 
     const getStatusMessage = () => {
         switch (videoStatus.status) {
