@@ -8,6 +8,10 @@ Microsoft 365 and other enterprise email providers have strict spam filters and 
 
 ## Step 1: Verify Domain Authentication in Resend
 
+### ⚠️ CRITICAL ISSUE FOUND: Missing SPF Record
+
+Your domain `santagram.app` is **missing the SPF record**, which is why emails aren't delivering to Microsoft 365. This is the #1 priority to fix.
+
 ### Check Domain Status
 
 1. Go to [Resend Dashboard > Domains](https://resend.com/domains)
@@ -21,13 +25,24 @@ Microsoft 365 and other enterprise email providers have strict spam filters and 
 
 For `santagram.app` to send emails via Resend, you need these DNS records:
 
-#### 1. SPF Record (TXT)
+#### 1. SPF Record (TXT) - **MISSING - ADD THIS NOW**
 ```
 Type: TXT
 Name: @ (or santagram.app)
 Value: v=spf1 include:resend.com ~all
 TTL: 3600 (or default)
 ```
+
+**How to Add in Cloudflare:**
+1. Go to Cloudflare Dashboard → Your Domain → DNS
+2. Click **"Add record"**
+3. Select:
+   - **Type**: TXT
+   - **Name**: @ (or leave blank, or `santagram.app`)
+   - **Content**: `v=spf1 include:resend.com ~all`
+   - **TTL**: Auto (or 3600)
+4. Click **"Save"**
+5. Wait 5-10 minutes, then verify with [MXToolbox SPF Checker](https://mxtoolbox.com/spf.aspx)
 
 #### 2. DKIM Records (TXT)
 Resend will provide 2-3 DKIM records. They look like:
