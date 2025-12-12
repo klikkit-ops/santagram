@@ -7,19 +7,44 @@ import { CurrencyProvider } from "@/components/CurrencyProvider";
 import { Analytics } from "@vercel/analytics/react";
 
 export const metadata: Metadata = {
-  title: "Personalized Santa Video Messages | Create Magical Moments | SantaGram",
-  description: "Create a magical, personalized video message from Santa Claus for your child! Videos where Santa knows their name, achievements & special interests. Ready in minutes!",
-  keywords: "personalized santa video, santa message for kids, custom santa video, christmas video message, santa claus video call, personalized christmas video, santa video for children",
+  metadataBase: new URL('https://santagram.app'),
+  title: {
+    default: "Personalized Santa Video Messages | Create Magical Moments | SantaGram",
+    template: "%s | SantaGram",
+  },
+  description: "Create a magical, personalized video message from Santa Claus for your child! Videos where Santa knows their name, achievements & special interests. Ready in 10-15 minutes!",
+  keywords: [
+    "personalized santa video",
+    "santa message for kids",
+    "custom santa video",
+    "christmas video message",
+    "santa claus video call",
+    "personalized christmas video",
+    "santa video for children",
+    "santa video message",
+    "christmas video from santa",
+    "personalized santa claus video",
+    "santa video gift",
+    "christmas video present",
+  ],
+  authors: [{ name: "SantaGram" }],
+  creator: "SantaGram",
+  publisher: "SantaGram",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "https://santagram.app",
     siteName: "SantaGram",
     title: "Personalized Santa Video Messages | Create Magical Moments",
-    description: "Create a magical, personalized video message from Santa Claus for your child! Videos where Santa knows their name. Ready in minutes!",
+    description: "Create a magical, personalized video message from Santa Claus for your child! Videos where Santa knows their name, achievements & special interests. Ready in 10-15 minutes!",
     images: [
       {
-        url: "/santa.png",
+        url: "https://santagram.app/santa.png",
         width: 1200,
         height: 630,
         alt: "SantaGram - Personalized Video Messages from Santa",
@@ -29,12 +54,26 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Personalized Santa Video Messages",
-    description: "Create a magical video message from Santa for your child!",
-    images: ["/santa.png"],
+    description: "Create a magical video message from Santa for your child! Ready in 10-15 minutes!",
+    images: ["https://santagram.app/santa.png"],
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  alternates: {
+    canonical: "https://santagram.app",
+  },
+  verification: {
+    // Add your Google Search Console verification code here when you get it
+    // google: 'your-verification-code',
   },
 };
 
@@ -90,6 +129,7 @@ export default function RootLayout({
             alt=""
           />
         </noscript>
+        {/* Enhanced Structured Data for SEO */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -97,22 +137,68 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "Product",
               name: "Personalized Santa Video Message",
-              description: "Personalized video message from Santa Claus for your child",
+              description: "Create a magical, personalized video message from Santa Claus for your child! Videos where Santa knows their name, achievements & special interests.",
               image: "https://santagram.app/santa.png",
               brand: {
                 "@type": "Brand",
                 name: "SantaGram",
+                logo: "https://santagram.app/santa.png",
               },
               offers: {
                 "@type": "Offer",
                 price: "2.99",
                 priceCurrency: "USD",
                 availability: "https://schema.org/InStock",
+                url: "https://santagram.app/create",
+                priceValidUntil: "2025-12-31",
               },
               aggregateRating: {
                 "@type": "AggregateRating",
                 ratingValue: "4.9",
                 reviewCount: "10000",
+                bestRating: "5",
+                worstRating: "1",
+              },
+              category: "Entertainment",
+              audience: {
+                "@type": "Audience",
+                audienceType: "Children",
+              },
+            }),
+          }}
+        />
+        {/* Organization Schema */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "SantaGram",
+              url: "https://santagram.app",
+              logo: "https://santagram.app/santa.png",
+              contactPoint: {
+                "@type": "ContactPoint",
+                contactType: "Customer Service",
+                email: "support@santagram.app",
+              },
+              sameAs: [],
+            }),
+          }}
+        />
+        {/* Website Schema */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              name: "SantaGram",
+              url: "https://santagram.app",
+              potentialAction: {
+                "@type": "SearchAction",
+                target: "https://santagram.app/search?q={search_term_string}",
+                "query-input": "required name=search_term_string",
               },
             }),
           }}
