@@ -8,36 +8,22 @@ export default function Hero() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
-    const [hasPlayedOnce, setHasPlayedOnce] = useState(false);
-    const [showControls, setShowControls] = useState(true); // Always show initially
+    const [isHovered, setIsHovered] = useState(false);
 
-    const handlePlay = useCallback(() => {
+    const togglePlayPause = useCallback(() => {
         const video = videoRef.current;
         if (!video) return;
 
-        // Unmute and play
-        video.muted = false;
-        video.play().then(() => {
-            setIsPlaying(true);
-            setHasPlayedOnce(true);
-            // Hide controls after initial play (pause button will show on hover/tap)
-            setTimeout(() => {
-                setShowControls(false);
-            }, 500);
-        }).catch((error) => {
-            console.log('Play failed:', error);
-        });
-    }, []);
-
-    const handlePause = useCallback(() => {
-        const video = videoRef.current;
-        if (!video) return;
-
-        video.pause();
-        setIsPlaying(false);
-        // Always show play button when paused
-        setShowControls(true);
-    }, []);
+        if (isPlaying) {
+            video.pause();
+        } else {
+            // Unmute and play
+            video.muted = false;
+            video.play().catch((error) => {
+                console.log('Play failed:', error);
+            });
+        }
+    }, [isPlaying]);
 
     useEffect(() => {
         const video = videoRef.current;
@@ -48,14 +34,12 @@ export default function Hero() {
         video.muted = true;
         video.pause();
 
-        const handleVideoPlay = () => {
+        const handlePlay = () => {
             setIsPlaying(true);
         };
 
-        const handleVideoPause = () => {
+        const handlePause = () => {
             setIsPlaying(false);
-            // Always show play button when paused
-            setShowControls(true);
         };
 
         const handleEnded = () => {
@@ -64,48 +48,42 @@ export default function Hero() {
             video.play();
         };
 
-        // Show controls on hover (desktop) - only when playing
+        // Hover handlers for showing pause button when playing
         const handleMouseEnter = () => {
-            if (hasPlayedOnce && isPlaying) {
-                setShowControls(true);
-            }
+            setIsHovered(true);
         };
 
         const handleMouseLeave = () => {
-            if (hasPlayedOnce && isPlaying) {
-                setShowControls(false);
-            }
+            setIsHovered(false);
         };
 
-        // Show controls on touch (mobile) - only when playing
+        // Touch handler for mobile
         const handleTouchStart = () => {
-            if (hasPlayedOnce && isPlaying) {
-                setShowControls(true);
-                // Hide after 3 seconds on mobile
+            setIsHovered(true);
+            // Hide after 3 seconds on mobile when playing
+            if (isPlaying) {
                 setTimeout(() => {
-                    if (isPlaying) {
-                        setShowControls(false);
-                    }
+                    setIsHovered(false);
                 }, 3000);
             }
         };
 
-        video.addEventListener('play', handleVideoPlay);
-        video.addEventListener('pause', handleVideoPause);
+        video.addEventListener('play', handlePlay);
+        video.addEventListener('pause', handlePause);
         video.addEventListener('ended', handleEnded);
         container.addEventListener('mouseenter', handleMouseEnter);
         container.addEventListener('mouseleave', handleMouseLeave);
         container.addEventListener('touchstart', handleTouchStart, { passive: true });
 
         return () => {
-            video.removeEventListener('play', handleVideoPlay);
-            video.removeEventListener('pause', handleVideoPause);
+            video.removeEventListener('play', handlePlay);
+            video.removeEventListener('pause', handlePause);
             video.removeEventListener('ended', handleEnded);
             container.removeEventListener('mouseenter', handleMouseEnter);
             container.removeEventListener('mouseleave', handleMouseLeave);
             container.removeEventListener('touchstart', handleTouchStart);
         };
-    }, [hasPlayedOnce, isPlaying]);
+    }, [isPlaying]);
 
     return (
         <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
@@ -195,37 +173,38 @@ export default function Hero() {
                                 </video>
 
                                 {/* Circular Play/Pause Button - Centered */}
-                                {showControls && (
-                                    <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                                        <button
-                                            onClick={isPlaying ? handlePause : handlePlay}
-                                            className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full backdrop-blur-sm flex items-center justify-center transition-colors shadow-2xl touch-manipulation pointer-events-auto ${
-                                                isPlaying 
-                                                    ? 'bg-black/40 hover:bg-black/60' 
-                                                    : 'bg-white/40 hover:bg-white/60'
-                                            }`}
-                                            aria-label={isPlaying ? 'Pause video' : 'Play video'}
-                                        >
-                                            {isPlaying ? (
-                                                <svg 
-                                                    className="w-10 h-10 sm:w-12 sm:h-12 text-white" 
-                                                    fill="currentColor" 
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                                                </svg>
-                                            ) : (
-                                                <svg 
-                                                    className="w-10 h-10 sm:w-12 sm:h-12 text-[var(--santa-red)] ml-1" 
-                                                    fill="currentColor" 
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <path d="M8 5v14l11-7z" />
-                                                </svg>
-                                            )}
-                                        </button>
-                                    </div>
-                                )}
+                                {/* Always visible - shows play when paused, pause when playing */}
+                                <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                                    <button
+                                        onClick={togglePlayPause}
+                                        className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full backdrop-blur-sm flex items-center justify-center transition-all shadow-2xl touch-manipulation pointer-events-auto ${
+                                            isPlaying 
+                                                ? isHovered 
+                                                    ? 'bg-black/60' 
+                                                    : 'bg-black/40'
+                                                : 'bg-white/40 hover:bg-white/60'
+                                        }`}
+                                        aria-label={isPlaying ? 'Pause video' : 'Play video'}
+                                    >
+                                        {isPlaying ? (
+                                            <svg 
+                                                className="w-10 h-10 sm:w-12 sm:h-12 text-white" 
+                                                fill="currentColor" 
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                                            </svg>
+                                        ) : (
+                                            <svg 
+                                                className="w-10 h-10 sm:w-12 sm:h-12 text-[var(--santa-red)] ml-1" 
+                                                fill="currentColor" 
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path d="M8 5v14l11-7z" />
+                                            </svg>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         {/* Santa Image */}
