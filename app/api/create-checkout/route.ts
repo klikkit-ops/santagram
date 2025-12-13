@@ -19,9 +19,17 @@ export async function POST(request: NextRequest) {
         } = body;
 
         // Validate required fields
-        if (!childName || !email || !messageType) {
+        if (!childName || !messageType) {
             return NextResponse.json(
                 { error: 'Missing required fields' },
+                { status: 400 }
+            );
+        }
+
+        // Validate email format if provided (email is optional)
+        if (email && (!email.includes('@') || email.length < 3)) {
+            return NextResponse.json(
+                { error: 'Invalid email format' },
                 { status: 400 }
             );
         }
@@ -34,7 +42,7 @@ export async function POST(request: NextRequest) {
         // Create Stripe checkout session
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
-            customer_email: email,
+            ...(email && { customer_email: email }), // Only include email if provided
             line_items: [
                 {
                     price_data: {
@@ -67,8 +75,8 @@ export async function POST(request: NextRequest) {
         // Store order in Supabase with pending status
         const { error: dbError } = await supabase.from('orders').insert({
             stripe_session_id: session.id,
-            email,
-            customer_email: email, // Also set customer_email for email delivery
+            email: email || null,
+            customer_email: email || null, // Also set customer_email for email delivery (optional)
             child_name: childName,
             child_age: childAge ? parseInt(childAge) : null,
             child_gender: childGender,

@@ -105,7 +105,8 @@ function CreatePageContent() {
     const canProceedStep1 = formData.childName && formData.childGender;
     const canProceedStep2 = true; // Optional fields
     const canProceedStep3 = formData.messageType;
-    const canSubmit = formData.email && formData.email.includes('@');
+    // Email is optional - validate format only if provided
+    const canSubmit = !formData.email || (formData.email.includes('@') && formData.email.length > 3);
 
     return (
         <>
@@ -362,7 +363,7 @@ function CreatePageContent() {
 
                                 {/* Email Input */}
                                 <div>
-                                    <label className="block text-white/80 mb-2">Email Address *</label>
+                                    <label className="block text-white/80 mb-2">Email Address (optional)</label>
                                     <input
                                         type="email"
                                         value={formData.email}
@@ -370,7 +371,7 @@ function CreatePageContent() {
                                         placeholder="your@email.com"
                                         className="input-festive"
                                     />
-                                    <p className="text-white/50 text-sm mt-1">We&apos;ll send the video to this email</p>
+                                    <p className="text-white/50 text-sm mt-1">We&apos;ll send the video to this email if provided. Otherwise, you can access it from the success page.</p>
                                 </div>
 
                                 {/* Price */}
