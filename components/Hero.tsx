@@ -139,13 +139,13 @@ export default function Hero() {
                 </div>
             </div>
 
-            <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-x-hidden">
+            <div className="relative z-10 max-w-7xl lg:max-w-[95%] xl:max-w-[98%] 2xl:max-w-full mx-auto px-4 sm:px-6 lg:px-12 xl:px-16 2xl:px-24 overflow-x-hidden">
                 {/* Two Column Layout */}
-                <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center" style={{ marginTop: '20px' }}>
+                <div className="grid lg:grid-cols-[1fr_1.3fr] gap-8 lg:gap-12 xl:gap-16 2xl:gap-20 items-center" style={{ marginTop: '20px' }}>
                     {/* Left Column - Text and CTAs */}
-                    <div className="text-center lg:text-left order-1 lg:order-1">
+                    <div className="text-center lg:text-center order-1 lg:order-1">
                         {/* Main Heading */}
-                        <h1 className="heading-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-6 leading-tight text-center lg:text-left px-2 sm:px-0">
+                        <h1 className="heading-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-6 leading-tight text-center lg:text-center px-2 sm:px-0">
                             <span className="lg:hidden">
                                 Create a Magical<br />
                                 <span className="text-white">Video Message from Santa!</span>
@@ -164,7 +164,7 @@ export default function Hero() {
                         </p>
 
                         {/* CTAs - Hidden on mobile, shown on desktop */}
-                        <div className="hidden lg:flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12">
+                        <div className="hidden lg:flex flex-col sm:flex-row gap-4 justify-center lg:justify-center mb-12">
                             <Link 
                                 href="/create" 
                                 className="btn-primary text-lg py-4 px-8 animate-pulse-glow"
@@ -175,11 +175,11 @@ export default function Hero() {
                         </div>
 
                         {/* Trust Badges - Hidden on mobile, shown on desktop */}
-                        <div className="hidden lg:flex flex-col gap-6 max-w-2xl lg:max-w-none">
+                        <div className="hidden lg:flex flex-col gap-6 max-w-2xl lg:max-w-none items-center">
                             {/* Secure Checkout */}
-                            <div className="text-center lg:text-left">
+                            <div className="text-center lg:text-center">
                                 <div className="text-white/80 text-sm mb-3 font-medium">Secure checkout</div>
-                                <div className="flex items-center justify-center lg:justify-start gap-3">
+                                <div className="flex items-center justify-center lg:justify-center gap-3">
                                     {/* Apple Pay */}
                                     <div className="bg-white rounded-lg px-3 py-2 flex items-center justify-center h-10 border border-gray-200">
                                         <img 
@@ -215,7 +215,7 @@ export default function Hero() {
                                 </div>
                             </div>
                             {/* Instant Delivery */}
-                            <div className="text-center lg:text-left">
+                            <div className="text-center lg:text-center">
                                 <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">Instant delivery</div>
                                 <div className="text-white/60 text-sm">Your video ready in minutes</div>
                             </div>
@@ -223,7 +223,7 @@ export default function Hero() {
                     </div>
 
                     {/* Right Column - Video Preview (moved up on mobile) */}
-                    <div className="relative w-full max-w-[380px] sm:max-w-2xl lg:max-w-none mx-auto lg:mx-0 pb-[60px] sm:pb-24 lg:pb-0 order-2 lg:order-2">
+                    <div className="relative w-full max-w-[380px] sm:max-w-2xl lg:max-w-none lg:w-full xl:w-full mx-auto lg:mx-0 pb-[60px] sm:pb-24 lg:pb-0 order-2 lg:order-2">
                         <div className="glass-card glow-gold" style={{ padding: '0.6rem' }}>
                             <div 
                                 ref={containerRef}
