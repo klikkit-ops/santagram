@@ -206,9 +206,17 @@ export default function Hero() {
                                     webkit-playsinline="true"
                                     x5-playsinline="true"
                                     onLoadedMetadata={(e) => {
-                                        // Set video to first frame (still preview)
+                                        // Set video to first frame (still preview) - works for both mobile and desktop
                                         const video = e.currentTarget;
                                         if (!hasInteracted) {
+                                            video.currentTime = 0;
+                                            video.pause(); // Ensure it stays paused
+                                        }
+                                    }}
+                                    onLoadedData={(e) => {
+                                        // Additional handler to ensure first frame is shown
+                                        const video = e.currentTarget;
+                                        if (!hasInteracted && video.paused) {
                                             video.currentTime = 0;
                                         }
                                     }}
