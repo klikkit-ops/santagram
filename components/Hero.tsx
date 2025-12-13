@@ -3,13 +3,22 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCurrency } from '@/components/CurrencyProvider';
 
 export default function Hero() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const router = useRouter();
+    const { currency } = useCurrency();
     const [isPlaying, setIsPlaying] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const [hasInteracted, setHasInteracted] = useState(false);
+    const [formData, setFormData] = useState({
+        childName: '',
+        childAge: '',
+        childGender: '',
+    });
 
     const togglePlayPause = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
@@ -334,11 +343,77 @@ export default function Hero() {
                     </div>
                 </div>
 
-                {/* Trust Badge - Moved further down the page */}
-                <div className="flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mt-12 border border-white/20 w-fit mx-auto">
-                    <span className="text-xl">🎅</span>
-                    <span className="text-white/80 text-sm">Trusted by 10,000+ happy families</span>
-                    <span className="text-xl">⭐</span>
+                {/* First Step of Create Flow */}
+                <div className="mt-12 max-w-2xl mx-auto">
+                    <div className="glass-card">
+                        <h2 className="text-xl font-semibold text-white flex items-center gap-2 mb-6">
+                            <span className="text-2xl">👶</span> Child&apos;s Details
+                        </h2>
+
+                        <div className="space-y-6">
+                            <div>
+                                <label className="block text-white/80 mb-2">Child&apos;s First Name *</label>
+                                <input
+                                    type="text"
+                                    value={formData.childName}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, childName: e.target.value }))}
+                                    placeholder="e.g., Emma"
+                                    className="input-festive w-full"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-white/80 mb-2">Age (optional)</label>
+                                <input
+                                    type="number"
+                                    value={formData.childAge}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, childAge: e.target.value }))}
+                                    placeholder="e.g., 7"
+                                    min="1"
+                                    max="18"
+                                    className="input-festive w-full"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-white/80 mb-2">Gender *</label>
+                                <div className="flex gap-4">
+                                    {['boy', 'girl', 'prefer not to say'].map((gender) => (
+                                        <button
+                                            key={gender}
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({ ...prev, childGender: gender }))}
+                                            className={`flex-1 p-3 rounded-xl border transition-all ${
+                                                formData.childGender === gender
+                                                    ? 'border-[var(--gold)] bg-[var(--gold)]/10 text-white'
+                                                    : 'border-white/20 bg-white/5 text-white/60 hover:bg-white/10'
+                                            }`}
+                                        >
+                                            {gender === 'boy' ? '👦' : gender === 'girl' ? '👧' : '🧒'} {gender.charAt(0).toUpperCase() + gender.slice(1)}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <Link
+                                href={{
+                                    pathname: '/create',
+                                    query: {
+                                        childName: formData.childName,
+                                        childAge: formData.childAge,
+                                        childGender: formData.childGender,
+                                    },
+                                }}
+                                className={`btn-primary w-full text-center block ${
+                                    !formData.childName || !formData.childGender
+                                        ? 'opacity-50 cursor-not-allowed pointer-events-none'
+                                        : ''
+                                }`}
+                            >
+                                Continue to Personalization →
+                            </Link>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>

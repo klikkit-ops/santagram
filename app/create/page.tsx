@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCurrency } from '@/components/CurrencyProvider';
 
 const messageTypes = [
@@ -13,6 +13,7 @@ const messageTypes = [
 
 export default function CreatePage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { currency, isLoading: currencyLoading } = useCurrency();
     const [step, setStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
@@ -26,6 +27,22 @@ export default function CreatePage() {
         messageType: 'christmas-morning',
         email: '',
     });
+
+    // Pre-fill form data from URL query params (when coming from hero page)
+    useEffect(() => {
+        const childName = searchParams.get('childName');
+        const childAge = searchParams.get('childAge');
+        const childGender = searchParams.get('childGender');
+        
+        if (childName || childAge || childGender) {
+            setFormData(prev => ({
+                ...prev,
+                childName: childName || prev.childName,
+                childAge: childAge || prev.childAge,
+                childGender: childGender || prev.childGender,
+            }));
+        }
+    }, [searchParams]);
 
     const updateFormData = (field: keyof FormData, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
