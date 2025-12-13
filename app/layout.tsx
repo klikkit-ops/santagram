@@ -76,6 +76,11 @@ export const metadata: Metadata = {
     // Add your Google Search Console verification code here when you get it
     // google: 'your-verification-code',
   },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    viewportFit: 'cover',
+  },
 };
 
 export default function RootLayout({
@@ -214,13 +219,21 @@ export default function RootLayout({
           </main>
           <Footer />
           {/* Mobile-only fixed snow at bottom */}
-          <div className="fixed bottom-0 left-0 right-0 w-full lg:hidden z-[9999] pointer-events-none">
+          <div 
+            className="fixed bottom-0 left-0 right-0 w-full lg:hidden z-[9999] pointer-events-none overflow-hidden" 
+            style={{ 
+              height: '120px', 
+              maxHeight: '120px',
+              paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            }}
+          >
             <Image
               src="/bg/snow.png"
               alt=""
               width={1920}
               height={200}
-              className="w-full h-auto object-cover"
+              className="w-full h-full object-cover object-bottom"
+              style={{ width: '100%', height: '100%', objectPosition: 'bottom' }}
               priority
             />
           </div>
