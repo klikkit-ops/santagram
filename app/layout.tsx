@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import Snowfall from "@/components/Snowfall";
 import { CurrencyProvider } from "@/components/CurrencyProvider";
 import { Analytics } from "@vercel/analytics/react";
+import Image from "next/image";
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://santagram.app'),
@@ -212,6 +213,17 @@ export default function RootLayout({
             {children}
           </main>
           <Footer />
+          {/* Mobile-only fixed snow at bottom */}
+          <div className="fixed bottom-0 left-0 right-0 w-full lg:hidden z-[9999] pointer-events-none">
+            <Image
+              src="/bg/snow.png"
+              alt=""
+              width={1920}
+              height={200}
+              className="w-full h-auto object-cover"
+              priority
+            />
+          </div>
         </CurrencyProvider>
         <Analytics />
       </body>

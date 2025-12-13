@@ -24,3 +24,7 @@ This endpoint is called automatically by the main application when processing vi
 
 The handler receives R2 credentials via the job input, so no environment variables need to be set in RunPod.
 
+
+
+
+
