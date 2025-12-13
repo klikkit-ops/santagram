@@ -9,6 +9,7 @@ export default function Hero() {
     const containerRef = useRef<HTMLDivElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
+    const [hasInteracted, setHasInteracted] = useState(false);
 
     const togglePlayPause = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
@@ -19,6 +20,9 @@ export default function Hero() {
             console.log('Video ref not available');
             return;
         }
+
+        // Mark that user has interacted
+        setHasInteracted(true);
 
         // Check actual video state instead of React state
         if (video.paused) {
@@ -51,6 +55,13 @@ export default function Hero() {
         const handlePlay = () => {
             console.log('Video play event');
             setIsPlaying(true);
+            
+            // On mobile, auto-hide pause button after 3 seconds
+            if (window.innerWidth < 1024) { // lg breakpoint
+                setTimeout(() => {
+                    setIsHovered(false);
+                }, 3000);
+            }
         };
 
         const handlePause = () => {
@@ -76,7 +87,7 @@ export default function Hero() {
         // Touch handler for mobile
         const handleTouchStart = () => {
             setIsHovered(true);
-            // Hide after 3 seconds on mobile when playing
+            // Auto-hide pause button after 3 seconds on mobile when playing
             if (isPlaying) {
                 setTimeout(() => {
                     setIsHovered(false);
@@ -181,14 +192,24 @@ export default function Hero() {
                                     playsInline
                                     loop
                                     muted
+                                    preload="metadata"
+                                    poster="https://blob.santagram.app/hero/hero-poster.jpg"
                                     webkit-playsinline="true"
                                     x5-playsinline="true"
+                                    onLoadedMetadata={(e) => {
+                                        // Set video to first frame (still preview)
+                                        const video = e.currentTarget;
+                                        if (!hasInteracted) {
+                                            video.currentTime = 0;
+                                        }
+                                    }}
                                 >
                                     <source src="https://blob.santagram.app/hero/hero.mp4" type="video/mp4" />
                                 </video>
 
                                 {/* Circular Play/Pause Button - Centered */}
                                 {/* Play button always visible when paused, pause button only on hover/tap when playing */}
+                                {/* On mobile, pause button auto-hides after 3 seconds */}
                                 {(!isPlaying || isHovered) && (
                                     <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                                         <button
