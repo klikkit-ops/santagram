@@ -190,8 +190,9 @@ export default function Hero() {
                                 {/* Always visible - shows play when paused, pause when playing */}
                                 <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                                     <button
+                                        type="button"
                                         onClick={togglePlayPause}
-                                        className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full backdrop-blur-sm flex items-center justify-center transition-all shadow-2xl touch-manipulation pointer-events-auto ${
+                                        className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full backdrop-blur-sm flex items-center justify-center transition-all shadow-2xl touch-manipulation pointer-events-auto cursor-pointer ${
                                             isPlaying 
                                                 ? isHovered 
                                                     ? 'bg-black/60' 
