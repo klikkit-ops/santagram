@@ -145,7 +145,7 @@ export default function Hero() {
                     {/* Left Column - Text and CTAs */}
                     <div className="text-center lg:text-left order-1 lg:order-1">
                         {/* Main Heading */}
-                        <h1 className="heading-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-6 leading-tight text-center lg:text-center px-2 sm:px-0">
+                        <h1 className="heading-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-6 leading-tight text-center lg:text-left px-2 sm:px-0">
                             <span className="lg:hidden">
                                 Create a Magical<br />
                                 <span className="text-white">Video Message from Santa!</span>
@@ -175,7 +175,7 @@ export default function Hero() {
                         </div>
 
                         {/* Trust Badges - Hidden on mobile, shown on desktop */}
-                        <div className="hidden lg:flex flex-col gap-6 max-w-2xl lg:max-w-none mx-auto lg:mx-0">
+                        <div className="hidden lg:flex flex-col gap-6 max-w-2xl lg:max-w-none">
                             {/* Secure Checkout */}
                             <div className="text-center lg:text-left">
                                 <div className="text-white/80 text-sm mb-3 font-medium">Secure checkout</div>
