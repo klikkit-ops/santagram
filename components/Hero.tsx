@@ -125,13 +125,13 @@ export default function Hero() {
                         <h1 className="heading-display text-4xl sm:text-5xl md:text-6xl lg:text-6xl mb-6 leading-tight text-center lg:text-center">
                             <span className="lg:hidden">
                                 Create a Magical<br />
-                                <span className="text-white">Video Message from Santa!</span> 🎄
+                                <span className="text-white">Video Message from Santa!</span>
                             </span>
                             <span className="hidden lg:inline">
                                 Create a Magical<br />
                                 <span className="text-white">Video Message</span>
                                 <br />
-                                <span className="text-white">from Santa!</span> 🎄
+                                <span className="text-white">from Santa!</span>
                             </span>
                         </h1>
 
