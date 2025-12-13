@@ -148,7 +148,7 @@ export default function Hero() {
                         <h1 className="heading-display text-4xl sm:text-5xl md:text-6xl lg:text-6xl mb-6 leading-tight text-center lg:text-center">
                             <span className="lg:hidden">
                                 Create a Magical<br />
-                                <span className="text-white">Video Message from Santa!</span>
+                                <span className="text-white" style={{ height: '50px' }}>Video Message from Santa!</span>
                             </span>
                             <span className="hidden lg:inline" style={{ marginBottom: '0px', marginTop: '0px' }}>
                                 Create a Magical<br />
@@ -159,7 +159,7 @@ export default function Hero() {
                         </h1>
 
                         {/* Mobile-only subheading with price */}
-                        <p className="lg:hidden text-lg sm:text-xl text-white/90 text-center mb-6 font-medium">
+                        <p className="lg:hidden text-lg sm:text-xl text-white/90 text-center mb-0 font-medium" style={{ fontSize: '16px' }}>
                             Personalised Santa video in minutes — only {currencyLoading ? '...' : currency.displayPrice}
                         </p>
 
@@ -223,7 +223,7 @@ export default function Hero() {
                     </div>
 
                     {/* Right Column - Video Preview (moved up on mobile) */}
-                    <div className="relative max-w-2xl lg:max-w-none mx-auto lg:mx-0 pb-20 sm:pb-24 lg:pb-0 order-2 lg:order-2">
+                    <div className="relative max-w-2xl lg:max-w-none mx-auto lg:mx-0 pb-[60px] sm:pb-24 lg:pb-0 order-2 lg:order-2" style={{ width: '380px' }}>
                         <div className="glass-card glow-gold" style={{ padding: '0.6rem' }}>
                             <div 
                                 ref={containerRef}
