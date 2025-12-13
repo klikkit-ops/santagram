@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCurrency } from '@/components/CurrencyProvider';
@@ -11,7 +11,7 @@ const messageTypes = [
     { id: 'encouragement', label: 'Encouragement', emoji: '⭐', description: 'Boost their confidence and motivation' },
 ];
 
-export default function CreatePage() {
+function CreatePageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { currency, isLoading: currencyLoading } = useCurrency();
@@ -400,4 +400,16 @@ interface FormData {
     specialMessage: string;
     messageType: string;
     email: string;
+}
+
+export default function CreatePage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen pt-24 pb-12 flex items-center justify-center">
+                <div className="text-white">Loading...</div>
+            </div>
+        }>
+            <CreatePageContent />
+        </Suspense>
+    );
 }
