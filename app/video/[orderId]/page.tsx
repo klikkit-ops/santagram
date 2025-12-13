@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { analytics } from '@/lib/analytics';
 
 interface VideoData {
     video_url: string;
@@ -18,6 +19,8 @@ function VideoContent() {
     const [videoData, setVideoData] = useState<VideoData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const hasTrackedView = useRef(false);
 
     useEffect(() => {
         if (!orderId) return;
@@ -35,8 +38,14 @@ function VideoContent() {
                         child_name: data.child_name || 'your child',
                         status: data.status,
                     });
+                    // Track video view when data is loaded
+                    if (!hasTrackedView.current) {
+                        analytics.trackVideoViewed(orderId);
+                        hasTrackedView.current = true;
+                    }
                 } else if (data.status === 'failed') {
                     setError(data.error || 'Video generation failed');
+                    analytics.trackVideoGenerationFailed(orderId, data.error || 'unknown');
                 } else {
                     setError('Video is not ready yet');
                 }
@@ -53,6 +62,9 @@ function VideoContent() {
 
     const handleDownload = () => {
         if (!videoData?.video_url) return;
+
+        // Track download event
+        analytics.trackVideoDownloaded(orderId);
 
         // For mobile devices, open in new tab and let user save from there
         // For desktop, trigger download
@@ -78,6 +90,7 @@ function VideoContent() {
 
         const shareUrl = window.location.href;
         const shareText = `Check out this magical message from Santa for ${videoData.child_name}!`;
+        let shareMethod = 'unknown';
 
         if (navigator.share) {
             try {
@@ -86,19 +99,26 @@ function VideoContent() {
                     text: shareText,
                     url: shareUrl,
                 });
+                shareMethod = 'native_share';
             } catch (err) {
                 // User cancelled or error occurred
                 console.log('Share cancelled or failed');
+                return; // Don't track if user cancelled
             }
         } else {
             // Fallback: copy to clipboard
             try {
                 await navigator.clipboard.writeText(shareUrl);
+                shareMethod = 'clipboard';
                 alert('Link copied to clipboard!');
             } catch (err) {
                 console.error('Failed to copy link:', err);
+                return; // Don't track if failed
             }
         }
+        
+        // Track successful share
+        analytics.trackVideoShared(orderId, shareMethod);
     };
 
     return (
@@ -147,11 +167,23 @@ function VideoContent() {
                             <div className="mb-8">
                                 <div className="relative aspect-video rounded-xl overflow-hidden bg-black shadow-2xl">
                                     <video
+                                        ref={videoRef}
                                         src={videoData.video_url}
                                         controls
                                         className="w-full h-full object-contain"
                                         poster="/santa.png"
                                         preload="metadata"
+                                        onTimeUpdate={(e) => {
+                                            // Track video completion when user watches most of it (90%+)
+                                            const video = e.currentTarget;
+                                            if (video.duration && !video.paused) {
+                                                const watchedPercent = (video.currentTime / video.duration) * 100;
+                                                if (watchedPercent >= 90 && !hasTrackedView.current) {
+                                                    analytics.trackVideoViewed(orderId, Math.round(watchedPercent));
+                                                    hasTrackedView.current = true;
+                                                }
+                                            }
+                                        }}
                                     >
                                         Your browser does not support the video tag.
                                     </video>

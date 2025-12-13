@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCurrency } from '@/components/CurrencyProvider';
+import { analytics } from '@/lib/analytics';
 
 export default function Hero() {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -40,6 +41,7 @@ export default function Hero() {
             video.play().then(() => {
                 console.log('Video playing');
                 setIsPlaying(true);
+                analytics.trackVideoPlay('hero');
             }).catch((error) => {
                 console.error('Play failed:', error);
             });
@@ -48,6 +50,7 @@ export default function Hero() {
             video.pause();
             console.log('Video paused');
             setIsPlaying(false);
+            analytics.trackVideoPause('hero');
         }
     }, []);
 
@@ -163,10 +166,18 @@ export default function Hero() {
 
                         {/* CTAs - Hidden on mobile, shown on desktop */}
                         <div className="hidden lg:flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12">
-                            <Link href="/create" className="btn-primary text-lg py-4 px-8 animate-pulse-glow">
+                            <Link 
+                                href="/create" 
+                                className="btn-primary text-lg py-4 px-8 animate-pulse-glow"
+                                onClick={() => analytics.trackCTAClick('hero_desktop', 'create_video_now')}
+                            >
                                 Create Your Video Now 🎁
                             </Link>
-                            <a href="#how-it-works" className="btn-secondary text-lg py-4 px-8">
+                            <a 
+                                href="#how-it-works" 
+                                className="btn-secondary text-lg py-4 px-8"
+                                onClick={() => analytics.trackCTAClick('hero_desktop', 'see_how_it_works')}
+                            >
                                 See How It Works
                             </a>
                         </div>
@@ -272,10 +283,18 @@ export default function Hero() {
                     <div className="lg:hidden order-3 w-full">
                         {/* CTAs - Shown on mobile after video, above subheading */}
                         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
-                            <Link href="/create" className="btn-primary text-lg py-4 px-8 animate-pulse-glow">
+                            <Link 
+                                href="/create" 
+                                className="btn-primary text-lg py-4 px-8 animate-pulse-glow"
+                                onClick={() => analytics.trackCTAClick('hero_mobile', 'create_video_now')}
+                            >
                                 Create Your Video Now 🎁
                             </Link>
-                            <a href="#how-it-works" className="btn-secondary text-lg py-4 px-8">
+                            <a 
+                                href="#how-it-works" 
+                                className="btn-secondary text-lg py-4 px-8"
+                                onClick={() => analytics.trackCTAClick('hero_mobile', 'see_how_it_works')}
+                            >
                                 See How It Works
                             </a>
                         </div>
@@ -370,6 +389,12 @@ export default function Hero() {
                                         ? 'opacity-50 cursor-not-allowed pointer-events-none'
                                         : ''
                                 }`}
+                                onClick={() => {
+                                    if (formData.childName && formData.childGender) {
+                                        analytics.trackFormStart('hero_quick_form');
+                                        analytics.trackCTAClick('hero_form', 'continue_to_personalization');
+                                    }
+                                }}
                             >
                                 Continue to Personalization →
                             </Link>

@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCurrency } from '@/components/CurrencyProvider';
+import { analytics } from '@/lib/analytics';
 
 const messageTypes = [
     { id: 'christmas-morning', label: 'Christmas Morning', emoji: '🎄', description: 'Perfect for watching on Christmas Day!' },
@@ -41,6 +42,11 @@ function CreatePageContent() {
                 childAge: childAge || prev.childAge,
                 childGender: childGender || prev.childGender,
             }));
+            // Track form start with pre-filled data
+            analytics.trackFormStart('create_page_prefilled');
+        } else {
+            // Track form start when landing directly on create page
+            analytics.trackFormStart('create_page_direct');
         }
     }, [searchParams]);
 
@@ -50,6 +56,12 @@ function CreatePageContent() {
 
     const handleSubmit = async () => {
         setIsLoading(true);
+        
+        // Track form completion and checkout initiation
+        analytics.trackFormStep(4, 'review_checkout');
+        const price = currency.price || 0;
+        analytics.trackCheckoutInitiated(currency.code, price, formData.messageType);
+        
         try {
             const response = await fetch('/api/create-checkout', {
                 method: 'POST',
@@ -65,10 +77,12 @@ function CreatePageContent() {
             if (data.url) {
                 router.push(data.url);
             } else {
+                analytics.trackCheckoutFailed('no_checkout_url');
                 alert('Something went wrong. Please try again.');
                 setIsLoading(false);
             }
-        } catch {
+        } catch (error) {
+            analytics.trackCheckoutFailed('api_error');
             alert('Something went wrong. Please try again.');
             setIsLoading(false);
         }
@@ -168,7 +182,12 @@ function CreatePageContent() {
                                 </div>
 
                                 <button
-                                    onClick={() => setStep(2)}
+                                    onClick={() => {
+                                        if (canProceedStep1) {
+                                            analytics.trackFormStep(1, 'child_details');
+                                            setStep(2);
+                                        }
+                                    }}
                                     disabled={!canProceedStep1}
                                     className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
@@ -226,10 +245,19 @@ function CreatePageContent() {
                                 </div>
 
                                 <div className="flex gap-4">
-                                    <button onClick={() => setStep(1)} className="btn-secondary flex-1">
+                                    <button 
+                                        onClick={() => setStep(1)} 
+                                        className="btn-secondary flex-1"
+                                    >
                                         ← Back
                                     </button>
-                                    <button onClick={() => setStep(3)} className="btn-primary flex-1">
+                                    <button 
+                                        onClick={() => {
+                                            analytics.trackFormStep(2, 'personalization');
+                                            setStep(3);
+                                        }} 
+                                        className="btn-primary flex-1"
+                                    >
                                         Continue →
                                     </button>
                                 </div>
@@ -270,7 +298,12 @@ function CreatePageContent() {
                                         ← Back
                                     </button>
                                     <button
-                                        onClick={() => setStep(4)}
+                                        onClick={() => {
+                                            if (canProceedStep3) {
+                                                analytics.trackFormStep(3, 'message_type');
+                                                setStep(4);
+                                            }
+                                        }}
                                         disabled={!canProceedStep3}
                                         className="btn-primary flex-1"
                                     >

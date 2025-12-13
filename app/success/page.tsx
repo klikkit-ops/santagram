@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { analytics } from '@/lib/analytics';
 
 interface VideoStatus {
     status: 'pending' | 'paid' | 'generating' | 'processing' | 'completed' | 'failed';
@@ -21,6 +22,7 @@ function SuccessContent() {
     const [pollCount, setPollCount] = useState(0);
     const [purchaseTracked, setPurchaseTracked] = useState(false);
     const [purchaseData, setPurchaseData] = useState<{ currency: string; price: number } | null>(null);
+    const [lastStatus, setLastStatus] = useState<string>('pending');
 
     useEffect(() => {
         if (!sessionId) return;
@@ -30,6 +32,20 @@ function SuccessContent() {
                 const response = await fetch(`/api/video-status?session_id=${sessionId}`);
                 const data = await response.json();
                 setVideoStatus(data);
+                
+                // Track status changes for analytics
+                if (lastStatus !== data.status) {
+                    if (data.status === 'generating' && lastStatus !== 'generating') {
+                        analytics.trackVideoGenerationStarted(sessionId);
+                    } else if (data.status === 'completed' && lastStatus !== 'completed' && data.video_url) {
+                        analytics.trackVideoGenerationCompleted(sessionId);
+                        // Track video viewed when it becomes available
+                        analytics.trackVideoViewed(sessionId);
+                    } else if (data.status === 'failed' && lastStatus !== 'failed') {
+                        analytics.trackVideoGenerationFailed(sessionId, data.error || 'unknown');
+                    }
+                    setLastStatus(data.status);
+                }
 
                 // Continue polling if not completed or failed
                 if (data.status !== 'completed' && data.status !== 'failed') {
@@ -68,7 +84,14 @@ function SuccessContent() {
     useEffect(() => {
         if (purchaseTracked) return; // Only track once
         
-        const trackPurchase = (currency: string, price: number, source: string) => {
+        const trackPurchase = (currency: string, price: number, source: string, orderId?: string, messageType?: string) => {
+            // Track in Vercel Analytics
+            if (orderId) {
+                analytics.trackCheckoutCompleted(currency, price, orderId);
+                analytics.trackPurchase(currency, price, messageType);
+            }
+            
+            // Track in Meta Pixel
             if (typeof window !== 'undefined' && (window as any).fbq) {
                 try {
                     // Track Purchase event - standard Meta Pixel format
@@ -107,7 +130,7 @@ function SuccessContent() {
                 const currency = purchaseData?.currency || videoStatus.currency || 'USD';
                 const price = purchaseData?.price || videoStatus.price || 3.99;
                 
-                if (trackPurchase(currency, price, 'immediate')) {
+                if (trackPurchase(currency, price, 'immediate', sessionId)) {
                     return; // Success
                 }
                 
@@ -125,8 +148,8 @@ function SuccessContent() {
 
         // Strategy 2: Also fire when we get confirmed status from API (backup)
         if ((videoStatus.status === 'paid' || videoStatus.status === 'completed') && 
-            videoStatus.currency && videoStatus.price && !purchaseTracked) {
-            trackPurchase(videoStatus.currency, videoStatus.price, 'api-confirmed');
+            videoStatus.currency && videoStatus.price && !purchaseTracked && sessionId) {
+            trackPurchase(videoStatus.currency, videoStatus.price, 'api-confirmed', sessionId);
         }
     }, [sessionId, purchaseTracked, purchaseData, videoStatus.status, videoStatus.currency, videoStatus.price]);
 
