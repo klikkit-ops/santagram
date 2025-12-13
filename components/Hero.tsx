@@ -77,9 +77,11 @@ export default function Hero() {
         const handleTouchStart = () => {
             setIsHovered(true);
             // Hide after 3 seconds on mobile when playing
-            setTimeout(() => {
-                setIsHovered(false);
-            }, 3000);
+            if (isPlaying) {
+                setTimeout(() => {
+                    setIsHovered(false);
+                }, 3000);
+            }
         };
 
         video.addEventListener('play', handlePlay);
@@ -187,39 +189,39 @@ export default function Hero() {
                                 </video>
 
                                 {/* Circular Play/Pause Button - Centered */}
-                                {/* Always visible - shows play when paused, pause when playing */}
-                                <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                                    <button
-                                        type="button"
-                                        onClick={togglePlayPause}
-                                        className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full backdrop-blur-sm flex items-center justify-center transition-all shadow-2xl touch-manipulation pointer-events-auto cursor-pointer ${
-                                            isPlaying 
-                                                ? isHovered 
+                                {/* Play button always visible when paused, pause button only on hover/tap when playing */}
+                                {(!isPlaying || isHovered) && (
+                                    <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                                        <button
+                                            type="button"
+                                            onClick={togglePlayPause}
+                                            className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full backdrop-blur-sm flex items-center justify-center transition-all shadow-2xl touch-manipulation pointer-events-auto cursor-pointer ${
+                                                isPlaying 
                                                     ? 'bg-black/60' 
-                                                    : 'bg-black/40'
-                                                : 'bg-white/40 hover:bg-white/60'
-                                        }`}
-                                        aria-label={isPlaying ? 'Pause video' : 'Play video'}
-                                    >
-                                        {isPlaying ? (
-                                            <svg 
-                                                className="w-10 h-10 sm:w-12 sm:h-12 text-white" 
-                                                fill="currentColor" 
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                                            </svg>
-                                        ) : (
-                                            <svg 
-                                                className="w-10 h-10 sm:w-12 sm:h-12 text-[var(--santa-red)] ml-1" 
-                                                fill="currentColor" 
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path d="M8 5v14l11-7z" />
-                                            </svg>
-                                        )}
-                                    </button>
-                                </div>
+                                                    : 'bg-white/40 hover:bg-white/60'
+                                            }`}
+                                            aria-label={isPlaying ? 'Pause video' : 'Play video'}
+                                        >
+                                            {isPlaying ? (
+                                                <svg 
+                                                    className="w-10 h-10 sm:w-12 sm:h-12 text-white" 
+                                                    fill="currentColor" 
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                                                </svg>
+                                            ) : (
+                                                <svg 
+                                                    className="w-10 h-10 sm:w-12 sm:h-12 text-[var(--santa-red)] ml-1" 
+                                                    fill="currentColor" 
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path d="M8 5v14l11-7z" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         {/* Santa Image */}
