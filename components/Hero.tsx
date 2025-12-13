@@ -128,27 +128,27 @@ export default function Hero() {
         <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
             {/* Background Decorations */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-20 left-10 w-20 h-20 opacity-20 animate-float">
+                <div className="absolute top-20 left-2 sm:left-10 w-16 h-16 sm:w-20 sm:h-20 opacity-20 animate-float">
                     <Image src="/rudolph.png" alt="" fill className="object-contain" />
                 </div>
-                <div className="absolute top-40 right-20 w-24 h-24 opacity-20 animate-float" style={{ animationDelay: '2s' }}>
+                <div className="absolute top-40 right-2 sm:right-20 w-20 h-20 sm:w-24 sm:h-24 opacity-20 animate-float" style={{ animationDelay: '2s' }}>
                     <Image src="/snowman.png" alt="" fill className="object-contain" />
                 </div>
-                <div className="absolute bottom-40 left-20 w-20 h-20 opacity-20 animate-float" style={{ animationDelay: '4s' }}>
+                <div className="absolute bottom-40 left-2 sm:left-20 w-16 h-16 sm:w-20 sm:h-20 opacity-20 animate-float" style={{ animationDelay: '4s' }}>
                     <Image src="/elf.png" alt="" fill className="object-contain" />
                 </div>
             </div>
 
-            <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-x-hidden">
                 {/* Two Column Layout */}
                 <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center" style={{ marginTop: '20px' }}>
                     {/* Left Column - Text and CTAs */}
                     <div className="text-center lg:text-left order-1 lg:order-1">
                         {/* Main Heading */}
-                        <h1 className="heading-display text-4xl sm:text-5xl md:text-6xl lg:text-6xl mb-6 leading-tight text-center lg:text-center">
+                        <h1 className="heading-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-6 leading-tight text-center lg:text-center px-2 sm:px-0">
                             <span className="lg:hidden">
                                 Create a Magical<br />
-                                <span className="text-white" style={{ height: '50px' }}>Video Message from Santa!</span>
+                                <span className="text-white">Video Message from Santa!</span>
                             </span>
                             <span className="hidden lg:inline" style={{ marginBottom: '0px', marginTop: '0px' }}>
                                 Create a Magical<br />
@@ -159,7 +159,7 @@ export default function Hero() {
                         </h1>
 
                         {/* Mobile-only subheading with price */}
-                        <p className="lg:hidden text-lg sm:text-xl text-white/90 text-center mb-0 font-medium" style={{ fontSize: '16px' }}>
+                        <p className="lg:hidden text-base sm:text-lg md:text-xl text-white/90 text-center mb-0 font-medium px-2 sm:px-0" style={{ fontSize: '16px' }}>
                             Personalised Santa video in minutes — only {currencyLoading ? '...' : currency.displayPrice}
                         </p>
 
@@ -223,7 +223,7 @@ export default function Hero() {
                     </div>
 
                     {/* Right Column - Video Preview (moved up on mobile) */}
-                    <div className="relative max-w-2xl lg:max-w-none mx-auto lg:mx-0 pb-[60px] sm:pb-24 lg:pb-0 order-2 lg:order-2" style={{ width: '380px' }}>
+                    <div className="relative w-full max-w-[380px] sm:max-w-2xl lg:max-w-none mx-auto lg:mx-0 pb-[60px] sm:pb-24 lg:pb-0 order-2 lg:order-2">
                         <div className="glass-card glow-gold" style={{ padding: '0.6rem' }}>
                             <div 
                                 ref={containerRef}
@@ -297,7 +297,7 @@ export default function Hero() {
                             </div>
                         </div>
                         {/* Santa Image */}
-                        <div className="absolute bottom-0 sm:-bottom-10 -right-10 w-32 h-32 sm:w-40 sm:h-40 animate-float z-50" style={{ left: '-16px' }}>
+                        <div className="absolute bottom-0 sm:-bottom-10 -right-4 sm:-right-10 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 animate-float z-50" style={{ left: 'auto' }}>
                             <Image src="/santa.png" alt="Santa Claus" fill className="object-contain drop-shadow-2xl" />
                         </div>
                     </div>
