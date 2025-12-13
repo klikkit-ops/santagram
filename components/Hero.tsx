@@ -15,6 +15,7 @@ export default function Hero() {
     const [isPlaying, setIsPlaying] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const [hasInteracted, setHasInteracted] = useState(false);
+    const [isAppleDevice, setIsAppleDevice] = useState(false);
     const [formData, setFormData] = useState({
         childName: '',
         childAge: '',
@@ -52,6 +53,14 @@ export default function Hero() {
             setIsPlaying(false);
             analytics.trackVideoPause('hero');
         }
+    }, []);
+
+    // Detect Apple device on mount
+    useEffect(() => {
+        const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+        const isApple = /iPad|iPhone|iPod|Macintosh/.test(userAgent) || 
+                       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        setIsAppleDevice(isApple);
     }, []);
 
     useEffect(() => {
@@ -301,7 +310,7 @@ export default function Hero() {
                         {/* Santa Video */}
                         <div className="absolute bottom-0 sm:-bottom-10 -left-4 sm:-left-10 lg:bottom-[-80px] lg:left-[-80px] w-48 h-48 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-[400px] lg:h-[400px] animate-float z-50" style={{ right: 'auto', background: 'transparent' }}>
                             <video
-                                src="/santa-alpha.webm"
+                                src={isAppleDevice ? "/santa-alpha.mov" : "https://blob.santagram.app/hero/santa-alpha.webm"}
                                 autoPlay
                                 loop
                                 muted
