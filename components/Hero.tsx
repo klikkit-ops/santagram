@@ -117,23 +117,22 @@ export default function Hero() {
             </div>
 
             <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* Trust Badge - Mobile Only (above content) */}
-                <div className="flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-2 mb-6 border border-white/20 mx-auto lg:hidden w-fit">
-                    <span className="text-lg">🎅</span>
-                    <span className="text-white/80 text-xs sm:text-sm whitespace-nowrap">Trusted by 10,000+ happy families</span>
-                    <span className="text-lg">⭐</span>
-                </div>
-
                 {/* Two Column Layout */}
                 <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
                     {/* Left Column - Text and CTAs */}
                     <div className="text-center lg:text-left order-1 lg:order-1">
                         {/* Main Heading */}
                         <h1 className="heading-display text-4xl sm:text-5xl md:text-6xl lg:text-6xl mb-6 leading-tight text-center lg:text-center">
-                            Create a Magical<br />
-                            <span className="text-white">Video Message</span>
-                            <br />
-                            <span className="text-white">from Santa!</span> 🎄
+                            <span className="lg:hidden">
+                                Create a Magical<br />
+                                <span className="text-white">Video Message from Santa!</span> 🎄
+                            </span>
+                            <span className="hidden lg:inline">
+                                Create a Magical<br />
+                                <span className="text-white">Video Message</span>
+                                <br />
+                                <span className="text-white">from Santa!</span> 🎄
+                            </span>
                         </h1>
 
                         {/* Subheadline - Hidden on mobile, shown on desktop */}
@@ -239,14 +238,8 @@ export default function Hero() {
 
                     {/* Mobile-only content (after video) */}
                     <div className="lg:hidden order-3 w-full">
-                        {/* Subheadline - Shown on mobile after video */}
-                        <p className="text-xl sm:text-2xl text-white/80 max-w-3xl mx-auto mb-10 leading-relaxed text-center">
-                            Personalized videos where Santa knows your child&apos;s name,
-                            achievements, and special message. Make this Christmas truly magical! ✨
-                        </p>
-
-                        {/* CTAs - Shown on mobile after video */}
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+                        {/* CTAs - Shown on mobile after video, above subheading */}
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
                             <Link href="/create" className="btn-primary text-lg py-4 px-8 animate-pulse-glow">
                                 Create Your Video Now 🎁
                             </Link>
@@ -254,6 +247,12 @@ export default function Hero() {
                                 See How It Works
                             </a>
                         </div>
+
+                        {/* Subheadline - Shown on mobile after video and CTAs */}
+                        <p className="text-xl sm:text-2xl text-white/80 max-w-3xl mx-auto mb-10 leading-relaxed text-center">
+                            Personalized videos where Santa knows your child&apos;s name,
+                            achievements, and special message. Make this Christmas truly magical! ✨
+                        </p>
 
                         {/* Stats - Shown on mobile after video */}
                         <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto">
