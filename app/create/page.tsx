@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCurrency } from '@/components/CurrencyProvider';
-import { analytics } from '@/lib/analytics';
+import { analytics, trackEvent } from '@/lib/analytics';
 
 const messageTypes = [
     { id: 'christmas-morning', label: 'Christmas Morning', emoji: '🎄', description: 'Perfect for watching on Christmas Day!' },
@@ -57,10 +57,24 @@ function CreatePageContent() {
     const handleSubmit = async () => {
         setIsLoading(true);
         
+        // Track Pay Now button click with specific context
+        const price = currency.price || 0;
+        analytics.trackCTAClick('checkout_step4', 'pay_now_button');
+        
         // Track form completion and checkout initiation
         analytics.trackFormStep(4, 'review_checkout');
-        const price = currency.price || 0;
         analytics.trackCheckoutInitiated(currency.code, price, formData.messageType);
+        
+        // Track additional Pay Now button context
+        trackEvent('pay_now_click', {
+            location: 'checkout_review',
+            currency: currency.code,
+            amount: price.toString(),
+            message_type: formData.messageType,
+            has_achievements: (formData.achievements && formData.achievements.length > 0) ? 'true' : 'false',
+            has_interests: (formData.interests && formData.interests.length > 0) ? 'true' : 'false',
+            has_special_message: (formData.specialMessage && formData.specialMessage.length > 0) ? 'true' : 'false',
+        });
         
         try {
             const response = await fetch('/api/create-checkout', {
