@@ -110,7 +110,7 @@ export default function Testimonials() {
                         <div className="flex items-center gap-2">
                             <span className="text-3xl">🎬</span>
                             <div className="text-left">
-                                <div className="text-xl font-bold text-white">50,000+</div>
+                                <div className="text-xl font-bold text-white">12,000+</div>
                                 <div className="text-white/60 text-sm">Videos Created</div>
                             </div>
                         </div>
