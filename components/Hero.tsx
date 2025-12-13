@@ -138,7 +138,7 @@ export default function Hero() {
 
             <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Two Column Layout */}
-                <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+                <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center" style={{ marginTop: '20px' }}>
                     {/* Left Column - Text and CTAs */}
                     <div className="text-center lg:text-left order-1 lg:order-1">
                         {/* Main Heading */}
@@ -147,7 +147,7 @@ export default function Hero() {
                                 Create a Magical<br />
                                 <span className="text-white">Video Message from Santa!</span>
                             </span>
-                            <span className="hidden lg:inline">
+                            <span className="hidden lg:inline" style={{ marginBottom: '0px', marginTop: '0px' }}>
                                 Create a Magical<br />
                                 <span className="text-white">Video Message</span>
                                 <br />
@@ -232,11 +232,12 @@ export default function Hero() {
                                         <button
                                             type="button"
                                             onClick={togglePlayPause}
-                                            className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full backdrop-blur-sm flex items-center justify-center transition-all shadow-2xl touch-manipulation pointer-events-auto cursor-pointer ${
+                                            className={`sm:w-24 sm:h-24 rounded-full backdrop-blur-sm flex items-center justify-center transition-all shadow-2xl touch-manipulation pointer-events-auto cursor-pointer ${
                                                 isPlaying 
                                                     ? 'bg-black/60' 
                                                     : 'bg-white/40 hover:bg-white/60'
                                             }`}
+                                            style={{ width: '75px', height: '75px' }}
                                             aria-label={isPlaying ? 'Pause video' : 'Play video'}
                                         >
                                             {isPlaying ? (

@@ -14,7 +14,7 @@ export default function FinalCTA() {
             <div className="relative max-w-4xl mx-auto text-center">
                 <div className="text-6xl mb-6">🎅🎄✨</div>
 
-                <h2 className="heading-display text-4xl sm:text-5xl md:text-6xl mb-6">
+                <h2 className="heading-display text-4xl sm:text-5xl md:text-6xl mb-6" style={{ height: '135px' }}>
                     Make This Christmas<br />
                     Unforgettable!
                 </h2>

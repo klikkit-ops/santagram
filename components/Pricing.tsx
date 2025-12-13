@@ -20,7 +20,7 @@ export default function Pricing() {
             <div className="max-w-4xl mx-auto">
                 {/* Section Header */}
                 <div className="text-center mb-12">
-                    <h2 className="heading-display text-4xl sm:text-5xl md:text-6xl mb-4">
+                    <h2 className="heading-display text-4xl sm:text-5xl md:text-6xl mb-4" style={{ height: '75px' }}>
                         Simple, Magical Pricing ✨
                     </h2>
                     <p className="text-white/70 text-lg max-w-2xl mx-auto">
