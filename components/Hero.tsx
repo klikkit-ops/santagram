@@ -6,8 +6,10 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 
 export default function Hero() {
     const videoRef = useRef<HTMLVideoElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
-    const [showPlayButton, setShowPlayButton] = useState(true);
+    const [hasPlayedOnce, setHasPlayedOnce] = useState(false);
+    const [showControls, setShowControls] = useState(true); // Always show initially
 
     const handlePlay = useCallback(() => {
         const video = videoRef.current;
@@ -17,28 +19,39 @@ export default function Hero() {
         video.muted = false;
         video.play().then(() => {
             setIsPlaying(true);
-            setShowPlayButton(false);
+            setHasPlayedOnce(true);
+            // Hide controls after initial play
+            setTimeout(() => {
+                setShowControls(false);
+            }, 500);
         }).catch((error) => {
             console.log('Play failed:', error);
         });
     }, []);
 
-    useEffect(() => {
+    const handlePause = useCallback(() => {
         const video = videoRef.current;
         if (!video) return;
+
+        video.pause();
+        setIsPlaying(false);
+    }, []);
+
+    useEffect(() => {
+        const video = videoRef.current;
+        const container = containerRef.current;
+        if (!video || !container) return;
 
         // Ensure video is muted and paused by default
         video.muted = true;
         video.pause();
 
-        const handlePlay = () => {
+        const handleVideoPlay = () => {
             setIsPlaying(true);
-            setShowPlayButton(false);
         };
 
-        const handlePause = () => {
+        const handleVideoPause = () => {
             setIsPlaying(false);
-            setShowPlayButton(true);
         };
 
         const handleEnded = () => {
@@ -47,16 +60,46 @@ export default function Hero() {
             video.play();
         };
 
-        video.addEventListener('play', handlePlay);
-        video.addEventListener('pause', handlePause);
+        // Show controls on hover (desktop)
+        const handleMouseEnter = () => {
+            if (hasPlayedOnce) {
+                setShowControls(true);
+            }
+        };
+
+        const handleMouseLeave = () => {
+            if (hasPlayedOnce) {
+                setShowControls(false);
+            }
+        };
+
+        // Show controls on touch (mobile)
+        const handleTouchStart = () => {
+            if (hasPlayedOnce) {
+                setShowControls(true);
+                // Hide after 3 seconds on mobile
+                setTimeout(() => {
+                    setShowControls(false);
+                }, 3000);
+            }
+        };
+
+        video.addEventListener('play', handleVideoPlay);
+        video.addEventListener('pause', handleVideoPause);
         video.addEventListener('ended', handleEnded);
+        container.addEventListener('mouseenter', handleMouseEnter);
+        container.addEventListener('mouseleave', handleMouseLeave);
+        container.addEventListener('touchstart', handleTouchStart, { passive: true });
 
         return () => {
-            video.removeEventListener('play', handlePlay);
-            video.removeEventListener('pause', handlePause);
+            video.removeEventListener('play', handleVideoPlay);
+            video.removeEventListener('pause', handleVideoPause);
             video.removeEventListener('ended', handleEnded);
+            container.removeEventListener('mouseenter', handleMouseEnter);
+            container.removeEventListener('mouseleave', handleMouseLeave);
+            container.removeEventListener('touchstart', handleTouchStart);
         };
-    }, []);
+    }, [hasPlayedOnce]);
 
     return (
         <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
@@ -129,7 +172,10 @@ export default function Hero() {
                     {/* Right Column - Video Preview */}
                     <div className="relative max-w-2xl lg:max-w-none mx-auto lg:mx-0 pb-20 sm:pb-24 lg:pb-0">
                         <div className="glass-card glow-gold" style={{ padding: '0.6rem' }}>
-                            <div className="relative aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-red-900/50 to-green-900/50">
+                            <div 
+                                ref={containerRef}
+                                className="relative aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-red-900/50 to-green-900/50"
+                            >
                                 <video
                                     ref={videoRef}
                                     className="w-full h-full object-cover"
@@ -142,21 +188,35 @@ export default function Hero() {
                                     <source src="https://blob.santagram.app/hero/hero.mp4" type="video/mp4" />
                                 </video>
 
-                                {/* Circular Play Button - Centered */}
-                                {showPlayButton && (
-                                    <div className="absolute inset-0 flex items-center justify-center z-10">
+                                {/* Circular Play/Pause Button - Centered */}
+                                {showControls && (
+                                    <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                                         <button
-                                            onClick={handlePlay}
-                                            className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white active:bg-white transition-all shadow-2xl hover:scale-110 active:scale-95 touch-manipulation group"
-                                            aria-label="Play video"
+                                            onClick={isPlaying ? handlePause : handlePlay}
+                                            className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full backdrop-blur-sm flex items-center justify-center transition-all shadow-2xl hover:scale-110 active:scale-95 touch-manipulation group pointer-events-auto ${
+                                                isPlaying 
+                                                    ? 'bg-black/40 hover:bg-black/60' 
+                                                    : 'bg-white/40 hover:bg-white/60'
+                                            }`}
+                                            aria-label={isPlaying ? 'Pause video' : 'Play video'}
                                         >
-                                            <svg 
-                                                className="w-10 h-10 sm:w-12 sm:h-12 text-[var(--santa-red)] ml-1 group-hover:scale-110 transition-transform" 
-                                                fill="currentColor" 
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path d="M8 5v14l11-7z" />
-                                            </svg>
+                                            {isPlaying ? (
+                                                <svg 
+                                                    className="w-10 h-10 sm:w-12 sm:h-12 text-white group-hover:scale-110 transition-transform" 
+                                                    fill="currentColor" 
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                                                </svg>
+                                            ) : (
+                                                <svg 
+                                                    className="w-10 h-10 sm:w-12 sm:h-12 text-[var(--santa-red)] ml-1 group-hover:scale-110 transition-transform" 
+                                                    fill="currentColor" 
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path d="M8 5v14l11-7z" />
+                                                </svg>
+                                            )}
                                         </button>
                                     </div>
                                 )}
