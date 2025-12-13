@@ -257,30 +257,6 @@ export default function Hero() {
                         <div className="absolute bottom-0 sm:-bottom-10 -right-10 w-32 h-32 sm:w-40 sm:h-40 animate-float z-50" style={{ left: '-16px' }}>
                             <Image src="/santa.png" alt="Santa Claus" fill className="object-contain drop-shadow-2xl" />
                         </div>
-                        
-                        {/* Create Flow Steps - Desktop Only (below video) */}
-                        <div className="hidden lg:block mt-6">
-                            <div className="flex items-center justify-center gap-3 mb-3">
-                                {[1, 2, 3, 4].map((step) => (
-                                    <div key={step} className="flex items-center">
-                                        <div className="w-8 h-8 rounded-full bg-[var(--santa-red)] flex items-center justify-center font-bold text-white text-sm shadow-lg">
-                                            {step}
-                                        </div>
-                                        {step < 4 && (
-                                            <div className="w-6 h-0.5 bg-[var(--santa-red)]" />
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="text-center">
-                                <p className="text-white/60 text-xs">
-                                    <span className="text-white font-semibold">1.</span> Personalize • 
-                                    <span className="text-white font-semibold"> 2.</span> Checkout • 
-                                    <span className="text-white font-semibold"> 3.</span> Review • 
-                                    <span className="text-white font-semibold"> 4.</span> Receive Video
-                                </p>
-                            </div>
-                        </div>
                     </div>
 
                     {/* Mobile-only content (after video) */}
@@ -314,30 +290,6 @@ export default function Hero() {
                             <div className="text-center">
                                 <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">10 min</div>
                                 <div className="text-white/60 text-sm">Delivery Time</div>
-                            </div>
-                        </div>
-
-                        {/* Create Flow Steps - Mobile Only (after stats) */}
-                        <div className="lg:hidden">
-                            <div className="flex items-center justify-center gap-3 mb-3">
-                                {[1, 2, 3, 4].map((step) => (
-                                    <div key={step} className="flex items-center">
-                                        <div className="w-8 h-8 rounded-full bg-[var(--santa-red)] flex items-center justify-center font-bold text-white text-sm shadow-lg">
-                                            {step}
-                                        </div>
-                                        {step < 4 && (
-                                            <div className="w-6 h-0.5 bg-[var(--santa-red)]" />
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="text-center">
-                                <p className="text-white/60 text-xs">
-                                    <span className="text-white font-semibold">1.</span> Personalize • 
-                                    <span className="text-white font-semibold"> 2.</span> Checkout • 
-                                    <span className="text-white font-semibold"> 3.</span> Review • 
-                                    <span className="text-white font-semibold"> 4.</span> Receive Video
-                                </p>
                             </div>
                         </div>
                     </div>
