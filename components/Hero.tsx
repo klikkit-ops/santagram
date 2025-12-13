@@ -10,20 +10,33 @@ export default function Hero() {
     const [isPlaying, setIsPlaying] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
 
-    const togglePlayPause = useCallback(() => {
+    const togglePlayPause = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
         const video = videoRef.current;
-        if (!video) return;
-
-        if (isPlaying) {
-            video.pause();
-        } else {
-            // Unmute and play
-            video.muted = false;
-            video.play().catch((error) => {
-                console.log('Play failed:', error);
-            });
+        if (!video) {
+            console.log('Video ref not available');
+            return;
         }
-    }, [isPlaying]);
+
+        // Check actual video state instead of React state
+        if (video.paused) {
+            // Video is paused, so play it
+            video.muted = false;
+            video.play().then(() => {
+                console.log('Video playing');
+                setIsPlaying(true);
+            }).catch((error) => {
+                console.error('Play failed:', error);
+            });
+        } else {
+            // Video is playing, so pause it
+            video.pause();
+            console.log('Video paused');
+            setIsPlaying(false);
+        }
+    }, []);
 
     useEffect(() => {
         const video = videoRef.current;
@@ -33,12 +46,15 @@ export default function Hero() {
         // Ensure video is muted and paused by default
         video.muted = true;
         video.pause();
+        setIsPlaying(false);
 
         const handlePlay = () => {
+            console.log('Video play event');
             setIsPlaying(true);
         };
 
         const handlePause = () => {
+            console.log('Video pause event');
             setIsPlaying(false);
         };
 
@@ -48,7 +64,7 @@ export default function Hero() {
             video.play();
         };
 
-        // Hover handlers for showing pause button when playing
+        // Hover handlers
         const handleMouseEnter = () => {
             setIsHovered(true);
         };
@@ -61,11 +77,9 @@ export default function Hero() {
         const handleTouchStart = () => {
             setIsHovered(true);
             // Hide after 3 seconds on mobile when playing
-            if (isPlaying) {
-                setTimeout(() => {
-                    setIsHovered(false);
-                }, 3000);
-            }
+            setTimeout(() => {
+                setIsHovered(false);
+            }, 3000);
         };
 
         video.addEventListener('play', handlePlay);
@@ -83,7 +97,7 @@ export default function Hero() {
             container.removeEventListener('mouseleave', handleMouseLeave);
             container.removeEventListener('touchstart', handleTouchStart);
         };
-    }, [isPlaying]);
+    }, []);
 
     return (
         <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
