@@ -139,13 +139,13 @@ export default function Hero() {
                 </div>
             </div>
 
-            <div className="relative z-10 max-w-7xl lg:max-w-[95%] xl:max-w-[98%] 2xl:max-w-full mx-auto px-4 sm:px-6 lg:px-12 xl:px-16 2xl:px-24 overflow-x-hidden">
+            <div className="relative z-10 max-w-7xl lg:max-w-[90%] xl:max-w-[85%] 2xl:max-w-[80%] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 overflow-x-hidden">
                 {/* Two Column Layout */}
-                <div className="grid lg:grid-cols-[1fr_1.3fr] gap-8 lg:gap-12 xl:gap-16 2xl:gap-20 items-center" style={{ marginTop: '20px' }}>
+                <div className="grid lg:grid-cols-[1fr_2fr] gap-8 lg:gap-10 xl:gap-12 items-center" style={{ marginTop: '20px' }}>
                     {/* Left Column - Text and CTAs */}
                     <div className="text-center lg:text-center order-1 lg:order-1">
                         {/* Main Heading */}
-                        <h1 className="heading-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-6 leading-tight text-center lg:text-center px-2 sm:px-0">
+                        <h1 className="heading-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-6 leading-normal text-center lg:text-center px-2 sm:px-0" style={{ lineHeight: '1.2', paddingBottom: '0.25em' }}>
                             <span className="lg:hidden">
                                 Create a Magical<br />
                                 <span className="text-white">Video Message from Santa!</span>
@@ -159,7 +159,7 @@ export default function Hero() {
                         </h1>
 
                         {/* Mobile-only subheading with price */}
-                        <p className="lg:hidden text-base sm:text-lg md:text-xl text-white/90 text-center mb-0 font-medium px-2 sm:px-0" style={{ fontSize: '16px' }}>
+                        <p className="lg:hidden text-sm sm:text-base md:text-lg text-white/90 text-center mb-0 font-medium px-2 sm:px-0 sm:whitespace-nowrap">
                             Personalised Santa video in minutes — only {currencyLoading ? '...' : currency.displayPrice}
                         </p>
 
@@ -223,15 +223,17 @@ export default function Hero() {
                     </div>
 
                     {/* Right Column - Video Preview (moved up on mobile) */}
-                    <div className="relative w-full max-w-[380px] sm:max-w-2xl lg:max-w-none lg:w-full xl:w-full mx-auto lg:mx-0 pb-[60px] sm:pb-24 lg:pb-0 order-2 lg:order-2">
-                        <div className="glass-card glow-gold" style={{ padding: '0.6rem' }}>
+                    <div className="relative w-full max-w-[380px] sm:max-w-2xl lg:max-w-none lg:w-full mx-auto lg:mx-0 pb-[60px] sm:pb-24 lg:pb-0 order-2 lg:order-2" style={{ maxWidth: '100%' }}>
+                        <div className="glass-card glow-gold" style={{ padding: '0.6rem', width: '100%', maxWidth: '100%' }}>
                             <div 
                                 ref={containerRef}
                                 className="relative aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-red-900/50 to-green-900/50"
+                                style={{ width: '100%', maxWidth: '100%' }}
                             >
                                 <video
                                     ref={videoRef}
                                     className="w-full h-full object-cover"
+                                    style={{ width: '100%', height: '100%', maxWidth: '100%', maxHeight: '100%' }}
                                     playsInline
                                     loop
                                     muted
