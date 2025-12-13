@@ -11,9 +11,9 @@ export interface CurrencyConfig {
 // Predefined prices for major currencies (rounded to x.99)
 export const currencies: Record<string, CurrencyConfig> = {
     GBP: { code: 'GBP', symbol: '£', price: 299, displayPrice: '£2.99' },
-    USD: { code: 'USD', symbol: '$', price: 399, displayPrice: '$3.99' },
+    USD: { code: 'USD', symbol: 'US$', price: 399, displayPrice: 'US$3.99' },
     EUR: { code: 'EUR', symbol: '€', price: 349, displayPrice: '€3.49' },
-    CAD: { code: 'CAD', symbol: 'CA$', price: 499, displayPrice: 'CA$4.99' },
+    CAD: { code: 'CAD', symbol: 'CA$', price: 599, displayPrice: 'CA$5.99' },
     AUD: { code: 'AUD', symbol: 'A$', price: 599, displayPrice: 'A$5.99' },
     NZD: { code: 'NZD', symbol: 'NZ$', price: 649, displayPrice: 'NZ$6.49' },
     CHF: { code: 'CHF', symbol: 'CHF', price: 349, displayPrice: 'CHF 3.49' },

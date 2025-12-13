@@ -11,7 +11,7 @@ export default function Hero() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
-    const { currency } = useCurrency();
+    const { currency, isLoading: currencyLoading } = useCurrency();
     const [isPlaying, setIsPlaying] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const [hasInteracted, setHasInteracted] = useState(false);
@@ -158,10 +158,9 @@ export default function Hero() {
                             </span>
                         </h1>
 
-                        {/* Subheadline - Hidden on mobile, shown on desktop */}
-                        <p className="hidden lg:block text-xl sm:text-2xl text-white/80 max-w-3xl lg:max-w-none mx-auto lg:mx-0 mb-10 leading-relaxed">
-                            Personalized videos where Santa knows your child&apos;s name,
-                            achievements, and special message. Make this Christmas truly magical! ✨
+                        {/* Mobile-only subheading with price */}
+                        <p className="lg:hidden text-lg sm:text-xl text-white/90 text-center mb-6 font-medium">
+                            Personalised Santa video in minutes — only {currencyLoading ? '...' : currency.displayPrice}
                         </p>
 
                         {/* CTAs - Hidden on mobile, shown on desktop */}
@@ -173,28 +172,52 @@ export default function Hero() {
                             >
                                 Create Your Video Now 🎁
                             </Link>
-                            <a 
-                                href="#how-it-works" 
-                                className="btn-secondary text-lg py-4 px-8"
-                                onClick={() => analytics.trackCTAClick('hero_desktop', 'see_how_it_works')}
-                            >
-                                See How It Works
-                            </a>
                         </div>
 
-                        {/* Stats - Hidden on mobile, shown on desktop */}
-                        <div className="hidden lg:grid grid-cols-3 gap-8 max-w-2xl lg:max-w-none mx-auto lg:mx-0">
+                        {/* Trust Badges - Hidden on mobile, shown on desktop */}
+                        <div className="hidden lg:flex flex-col gap-6 max-w-2xl lg:max-w-none mx-auto lg:mx-0">
+                            {/* Secure Checkout */}
                             <div className="text-center lg:text-left">
-                                <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">10K+</div>
-                                <div className="text-white/60 text-sm">Happy Kids</div>
+                                <div className="text-white/80 text-sm mb-3 font-medium">Secure checkout</div>
+                                <div className="flex items-center justify-center lg:justify-start gap-3">
+                                    {/* Apple Pay */}
+                                    <div className="bg-white rounded-lg px-3 py-2 flex items-center justify-center h-10 border border-gray-200">
+                                        <img 
+                                            src="/payment-logos/apple-pay.svg" 
+                                            alt="Apple Pay" 
+                                            className="h-7 w-auto"
+                                        />
+                                    </div>
+                                    {/* Google Pay */}
+                                    <div className="bg-white rounded-lg px-3 py-2 flex items-center justify-center h-10 border border-gray-200">
+                                        <img 
+                                            src="/payment-logos/google-pay.svg" 
+                                            alt="Google Pay" 
+                                            className="h-7 w-auto"
+                                        />
+                                    </div>
+                                    {/* Visa */}
+                                    <div className="bg-white rounded-lg px-3 py-2 flex items-center justify-center h-10 border border-gray-200">
+                                        <img 
+                                            src="/payment-logos/visa.svg" 
+                                            alt="Visa" 
+                                            className="h-7 w-auto"
+                                        />
+                                    </div>
+                                    {/* Mastercard */}
+                                    <div className="bg-white rounded-lg px-3 py-2 flex items-center justify-center h-10 border border-gray-200">
+                                        <img 
+                                            src="/payment-logos/mastercard.svg" 
+                                            alt="Mastercard" 
+                                            className="h-7 w-auto"
+                                        />
+                                    </div>
+                                </div>
                             </div>
+                            {/* Instant Delivery */}
                             <div className="text-center lg:text-left">
-                                <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">4.9★</div>
-                                <div className="text-white/60 text-sm">Parent Rating</div>
-                            </div>
-                            <div className="text-center lg:text-left">
-                                <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">10 min</div>
-                                <div className="text-white/60 text-sm">Delivery Time</div>
+                                <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">Instant delivery</div>
+                                <div className="text-white/60 text-sm">Your video ready in minutes</div>
                             </div>
                         </div>
                     </div>
@@ -281,7 +304,7 @@ export default function Hero() {
 
                     {/* Mobile-only content (after video) */}
                     <div className="lg:hidden order-3 w-full">
-                        {/* CTAs - Shown on mobile after video, above subheading */}
+                        {/* CTAs - Shown on mobile after video */}
                         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
                             <Link 
                                 href="/create" 
@@ -290,34 +313,52 @@ export default function Hero() {
                             >
                                 Create Your Video Now 🎁
                             </Link>
-                            <a 
-                                href="#how-it-works" 
-                                className="btn-secondary text-lg py-4 px-8"
-                                onClick={() => analytics.trackCTAClick('hero_mobile', 'see_how_it_works')}
-                            >
-                                See How It Works
-                            </a>
                         </div>
 
-                        {/* Subheadline - Shown on mobile after video and CTAs */}
-                        <p className="text-xl sm:text-2xl text-white/80 max-w-3xl mx-auto mb-10 leading-relaxed text-center">
-                            Personalized videos where Santa knows your child&apos;s name,
-                            achievements, and special message. Make this Christmas truly magical! ✨
-                        </p>
-
-                        {/* Stats - Shown on mobile after video */}
-                        <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto mb-10">
+                        {/* Trust Badges - Shown on mobile after video */}
+                        <div className="flex flex-col gap-6 max-w-2xl mx-auto mb-10">
+                            {/* Secure Checkout */}
                             <div className="text-center">
-                                <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">10K+</div>
-                                <div className="text-white/60 text-sm">Happy Kids</div>
+                                <div className="text-white/80 text-sm mb-3 font-medium">Secure checkout</div>
+                                <div className="flex items-center justify-center gap-3">
+                                    {/* Apple Pay */}
+                                    <div className="bg-white rounded-lg px-3 py-2 flex items-center justify-center h-10 border border-gray-200">
+                                        <img 
+                                            src="/payment-logos/apple-pay.svg" 
+                                            alt="Apple Pay" 
+                                            className="h-7 w-auto"
+                                        />
+                                    </div>
+                                    {/* Google Pay */}
+                                    <div className="bg-white rounded-lg px-3 py-2 flex items-center justify-center h-10 border border-gray-200">
+                                        <img 
+                                            src="/payment-logos/google-pay.svg" 
+                                            alt="Google Pay" 
+                                            className="h-7 w-auto"
+                                        />
+                                    </div>
+                                    {/* Visa */}
+                                    <div className="bg-white rounded-lg px-3 py-2 flex items-center justify-center h-10 border border-gray-200">
+                                        <img 
+                                            src="/payment-logos/visa.svg" 
+                                            alt="Visa" 
+                                            className="h-7 w-auto"
+                                        />
+                                    </div>
+                                    {/* Mastercard */}
+                                    <div className="bg-white rounded-lg px-3 py-2 flex items-center justify-center h-10 border border-gray-200">
+                                        <img 
+                                            src="/payment-logos/mastercard.svg" 
+                                            alt="Mastercard" 
+                                            className="h-7 w-auto"
+                                        />
+                                    </div>
+                                </div>
                             </div>
+                            {/* Instant Delivery */}
                             <div className="text-center">
-                                <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">4.9★</div>
-                                <div className="text-white/60 text-sm">Parent Rating</div>
-                            </div>
-                            <div className="text-center">
-                                <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">10 min</div>
-                                <div className="text-white/60 text-sm">Delivery Time</div>
+                                <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">Instant delivery</div>
+                                <div className="text-white/60 text-sm">Your video ready in minutes</div>
                             </div>
                         </div>
                     </div>
