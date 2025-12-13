@@ -109,7 +109,7 @@ export default function Hero() {
         const handleTouchStart = () => {
             setIsHovered(true);
             // Auto-hide pause button after 3 seconds on mobile when playing
-            if (isPlaying) {
+            if (!video.paused) {
                 setTimeout(() => {
                     setIsHovered(false);
                 }, 3000);
