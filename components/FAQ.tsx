@@ -5,7 +5,7 @@ import { useState } from 'react';
 const faqs = [
     {
         question: 'How long does it take to receive my video?',
-        answer: 'Most videos are ready within 10-15 minutes! You\'ll receive an email with a link to view and download your personalized Santa video as soon as it\'s ready.',
+        answer: 'Most videos are ready within 10 minutes! You\'ll receive an email with a link to view and download your personalized Santa video as soon as it\'s ready.',
     },
     {
         question: 'How personalized is the video?',

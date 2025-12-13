@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: "Create Your Personalized Santa Video | SantaGram",
-  description: "Create a magical personalized video message from Santa Claus for your child! Tell us about your child and Santa will create a special message just for them. Ready in 10-15 minutes!",
+  description: "Create a magical personalized video message from Santa Claus for your child! Tell us about your child and Santa will create a special message just for them. Ready in 10 minutes!",
   keywords: [
     "create santa video",
     "personalized santa video",
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "Create Your Personalized Santa Video | SantaGram",
-    description: "Create a magical personalized video message from Santa Claus for your child! Ready in 10-15 minutes!",
+    description: "Create a magical personalized video message from Santa Claus for your child! Ready in 10 minutes!",
     url: "https://santagram.app/create",
   },
   alternates: {

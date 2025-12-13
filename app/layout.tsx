@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     default: "Personalized Santa Video Messages | Create Magical Moments | SantaGram",
     template: "%s | SantaGram",
   },
-  description: "Create a magical, personalized video message from Santa Claus for your child! Videos where Santa knows their name, achievements & special interests. Ready in 10-15 minutes!",
+  description: "Create a magical, personalized video message from Santa Claus for your child! Videos where Santa knows their name, achievements & special interests. Ready in 10 minutes!",
   keywords: [
     "personalized santa video",
     "santa message for kids",
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     url: "https://santagram.app",
     siteName: "SantaGram",
     title: "Personalized Santa Video Messages | Create Magical Moments",
-    description: "Create a magical, personalized video message from Santa Claus for your child! Videos where Santa knows their name, achievements & special interests. Ready in 10-15 minutes!",
+    description: "Create a magical, personalized video message from Santa Claus for your child! Videos where Santa knows their name, achievements & special interests. Ready in 10 minutes!",
     images: [
       {
         url: "https://santagram.app/santa.png",
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Personalized Santa Video Messages",
-    description: "Create a magical video message from Santa for your child! Ready in 10-15 minutes!",
+    description: "Create a magical video message from Santa for your child! Ready in 10 minutes!",
     images: ["https://santagram.app/santa.png"],
   },
   robots: {

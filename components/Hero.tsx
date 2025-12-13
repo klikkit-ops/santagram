@@ -127,7 +127,7 @@ export default function Hero() {
                 {/* Two Column Layout */}
                 <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
                     {/* Left Column - Text and CTAs */}
-                    <div className="text-center lg:text-left">
+                    <div className="text-center lg:text-left order-1 lg:order-1">
                         {/* Main Heading */}
                         <h1 className="heading-display text-4xl sm:text-5xl md:text-6xl lg:text-6xl mb-6 leading-tight text-center lg:text-center">
                             Create a Magical<br />
@@ -136,14 +136,14 @@ export default function Hero() {
                             <span className="text-white">from Santa!</span> 🎄
                         </h1>
 
-                        {/* Subheadline */}
-                        <p className="text-xl sm:text-2xl text-white/80 max-w-3xl lg:max-w-none mx-auto lg:mx-0 mb-10 leading-relaxed">
+                        {/* Subheadline - Hidden on mobile, shown on desktop */}
+                        <p className="hidden lg:block text-xl sm:text-2xl text-white/80 max-w-3xl lg:max-w-none mx-auto lg:mx-0 mb-10 leading-relaxed">
                             Personalized videos where Santa knows your child&apos;s name,
                             achievements, and special message. Make this Christmas truly magical! ✨
                         </p>
 
-                        {/* CTAs */}
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12">
+                        {/* CTAs - Hidden on mobile, shown on desktop */}
+                        <div className="hidden lg:flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12">
                             <Link href="/create" className="btn-primary text-lg py-4 px-8 animate-pulse-glow">
                                 Create Your Video Now 🎁
                             </Link>
@@ -152,8 +152,8 @@ export default function Hero() {
                             </a>
                         </div>
 
-                        {/* Stats */}
-                        <div className="grid grid-cols-3 gap-8 max-w-2xl lg:max-w-none mx-auto lg:mx-0">
+                        {/* Stats - Hidden on mobile, shown on desktop */}
+                        <div className="hidden lg:grid grid-cols-3 gap-8 max-w-2xl lg:max-w-none mx-auto lg:mx-0">
                             <div className="text-center lg:text-left">
                                 <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">10K+</div>
                                 <div className="text-white/60 text-sm">Happy Kids</div>
@@ -163,14 +163,14 @@ export default function Hero() {
                                 <div className="text-white/60 text-sm">Parent Rating</div>
                             </div>
                             <div className="text-center lg:text-left">
-                                <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">10-15min</div>
+                                <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">10 min</div>
                                 <div className="text-white/60 text-sm">Delivery Time</div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Right Column - Video Preview */}
-                    <div className="relative max-w-2xl lg:max-w-none mx-auto lg:mx-0 pb-20 sm:pb-24 lg:pb-0">
+                    {/* Right Column - Video Preview (moved up on mobile) */}
+                    <div className="relative max-w-2xl lg:max-w-none mx-auto lg:mx-0 pb-20 sm:pb-24 lg:pb-0 order-2 lg:order-2">
                         <div className="glass-card glow-gold" style={{ padding: '0.6rem' }}>
                             <div 
                                 ref={containerRef}
@@ -234,6 +234,41 @@ export default function Hero() {
                             <span className="text-xl">🎅</span>
                             <span className="text-white/80 text-sm">Trusted by 10,000+ happy families</span>
                             <span className="text-xl">⭐</span>
+                        </div>
+                    </div>
+
+                    {/* Mobile-only content (after video) */}
+                    <div className="lg:hidden order-3 w-full">
+                        {/* Subheadline - Shown on mobile after video */}
+                        <p className="text-xl sm:text-2xl text-white/80 max-w-3xl mx-auto mb-10 leading-relaxed text-center">
+                            Personalized videos where Santa knows your child&apos;s name,
+                            achievements, and special message. Make this Christmas truly magical! ✨
+                        </p>
+
+                        {/* CTAs - Shown on mobile after video */}
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+                            <Link href="/create" className="btn-primary text-lg py-4 px-8 animate-pulse-glow">
+                                Create Your Video Now 🎁
+                            </Link>
+                            <a href="#how-it-works" className="btn-secondary text-lg py-4 px-8">
+                                See How It Works
+                            </a>
+                        </div>
+
+                        {/* Stats - Shown on mobile after video */}
+                        <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto">
+                            <div className="text-center">
+                                <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">10K+</div>
+                                <div className="text-white/60 text-sm">Happy Kids</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">4.9★</div>
+                                <div className="text-white/60 text-sm">Parent Rating</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">10 min</div>
+                                <div className="text-white/60 text-sm">Delivery Time</div>
+                            </div>
                         </div>
                     </div>
                 </div>
