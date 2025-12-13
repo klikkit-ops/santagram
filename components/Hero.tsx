@@ -249,11 +249,28 @@ export default function Hero() {
                             <Image src="/santa.png" alt="Santa Claus" fill className="object-contain drop-shadow-2xl" />
                         </div>
                         
-                        {/* Trust Badge - Desktop Only (below video) */}
-                        <div className="hidden lg:flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mt-6 border border-white/20 w-full">
-                            <span className="text-xl">🎅</span>
-                            <span className="text-white/80 text-sm">Trusted by 10,000+ happy families</span>
-                            <span className="text-xl">⭐</span>
+                        {/* Create Flow Steps - Desktop Only (below video) */}
+                        <div className="hidden lg:block mt-6">
+                            <div className="flex items-center justify-center gap-3 mb-3">
+                                {[1, 2, 3, 4].map((step) => (
+                                    <div key={step} className="flex items-center">
+                                        <div className="w-8 h-8 rounded-full bg-[var(--santa-red)] flex items-center justify-center font-bold text-white text-sm shadow-lg">
+                                            {step}
+                                        </div>
+                                        {step < 4 && (
+                                            <div className="w-6 h-0.5 bg-[var(--santa-red)]" />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="text-center">
+                                <p className="text-white/60 text-xs">
+                                    <span className="text-white font-semibold">1.</span> Personalize • 
+                                    <span className="text-white font-semibold"> 2.</span> Checkout • 
+                                    <span className="text-white font-semibold"> 3.</span> Review • 
+                                    <span className="text-white font-semibold"> 4.</span> Receive Video
+                                </p>
+                            </div>
                         </div>
                     </div>
 
@@ -276,7 +293,7 @@ export default function Hero() {
                         </p>
 
                         {/* Stats - Shown on mobile after video */}
-                        <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto">
+                        <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto mb-10">
                             <div className="text-center">
                                 <div className="text-3xl sm:text-4xl font-bold text-[var(--gold)]">10K+</div>
                                 <div className="text-white/60 text-sm">Happy Kids</div>
@@ -290,7 +307,38 @@ export default function Hero() {
                                 <div className="text-white/60 text-sm">Delivery Time</div>
                             </div>
                         </div>
+
+                        {/* Create Flow Steps - Mobile Only (after stats) */}
+                        <div className="lg:hidden">
+                            <div className="flex items-center justify-center gap-3 mb-3">
+                                {[1, 2, 3, 4].map((step) => (
+                                    <div key={step} className="flex items-center">
+                                        <div className="w-8 h-8 rounded-full bg-[var(--santa-red)] flex items-center justify-center font-bold text-white text-sm shadow-lg">
+                                            {step}
+                                        </div>
+                                        {step < 4 && (
+                                            <div className="w-6 h-0.5 bg-[var(--santa-red)]" />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="text-center">
+                                <p className="text-white/60 text-xs">
+                                    <span className="text-white font-semibold">1.</span> Personalize • 
+                                    <span className="text-white font-semibold"> 2.</span> Checkout • 
+                                    <span className="text-white font-semibold"> 3.</span> Review • 
+                                    <span className="text-white font-semibold"> 4.</span> Receive Video
+                                </p>
+                            </div>
+                        </div>
                     </div>
+                </div>
+
+                {/* Trust Badge - Moved further down the page */}
+                <div className="flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mt-12 border border-white/20 w-fit mx-auto">
+                    <span className="text-xl">🎅</span>
+                    <span className="text-white/80 text-sm">Trusted by 10,000+ happy families</span>
+                    <span className="text-xl">⭐</span>
                 </div>
             </div>
         </section>
