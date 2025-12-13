@@ -299,7 +299,7 @@ export default function Hero() {
                             </div>
                         </div>
                         {/* Santa Video */}
-                        <div className="absolute bottom-0 sm:-bottom-10 -left-4 sm:-left-10 lg:bottom-[-80px] lg:left-[-80px] w-48 h-48 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-[400px] lg:h-[400px] animate-float z-50" style={{ right: 'auto' }}>
+                        <div className="absolute bottom-0 sm:-bottom-10 -left-4 sm:-left-10 lg:bottom-[-80px] lg:left-[-80px] w-48 h-48 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-[400px] lg:h-[400px] animate-float z-50" style={{ right: 'auto', background: 'transparent' }}>
                             <video
                                 src="/santa-alpha.webm"
                                 autoPlay
@@ -308,7 +308,18 @@ export default function Hero() {
                                 playsInline
                                 preload="auto"
                                 className="w-full h-full object-contain drop-shadow-2xl"
-                                style={{ position: 'absolute', height: '100%', width: '100%', left: 0, top: 0, right: 0, bottom: 0, pointerEvents: 'none' }}
+                                style={{ 
+                                    position: 'absolute', 
+                                    height: '100%', 
+                                    width: '100%', 
+                                    left: 0, 
+                                    top: 0, 
+                                    right: 0, 
+                                    bottom: 0, 
+                                    pointerEvents: 'none',
+                                    backgroundColor: 'transparent',
+                                    background: 'transparent'
+                                }}
                             />
                         </div>
                     </div>
